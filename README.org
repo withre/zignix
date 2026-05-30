@@ -21,25 +21,32 @@ the shasum from [[https://ziglang.org/download/index.json][ziglang.org/download/
 
 ** Add zignix to your flake
 
+The lib index is keyed by system, so use ~pkgs.stdenv.hostPlatform.system~
+from the appropriate ~pkgs~ for each output rather than threading a bare
+~system~ string through your flake. This keeps the same expression valid
+under cross-compilation and across all supported hosts.
+
 #+begin_src nix
 {
   inputs.zignix.url = "github:youruser/zignix";
   # ... your other inputs ...
 
-  outputs = { self, nixpkgs, zignix, ... }: let
-    system = "x86_64-linux";
-    pkgs = nixpkgs.legacyPackages.${system};
-  in {
-    devShells.${system}.default = pkgs.mkShell {
-      packages = [
-        # Pin any Zig nightly from upstream:
-        (zignix.lib.${system}.fromBuild {
+  outputs = { self, nixpkgs, zignix, ... }:
+    let
+      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      forAllSystems = nixpkgs.lib.genAttrs systems;
+
+      zigFor = pkgs:
+        zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
           version = "0.17.0-dev.607+456b2ec07";
           sha256  = "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33";
-        })
-      ];
+        };
+    in {
+      devShells = forAllSystems (system:
+        let pkgs = nixpkgs.legacyPackages.${system}; in {
+          default = pkgs.mkShell { packages = [ (zigFor pkgs) ]; };
+        });
     };
-  };
 }
 #+end_src
 
@@ -49,7 +56,7 @@ Don't know the sha256 yet? Set it to ~lib.fakeHash~ (or any obviously
 wrong value) and let Nix tell you the right one:
 
 #+begin_src nix
-(zignix.lib.${system}.fromBuild {
+(zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
   version = "0.17.0-dev.612+abcdef012";
   sha256  = nixpkgs.lib.fakeHash;
 })
@@ -84,7 +91,7 @@ Sugar for tagged releases, which live at
 ~https://ziglang.org/download/<version>/~ rather than ~/builds/~.
 
 #+begin_src nix
-(zignix.lib.${system}.fromTagged {
+(zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromTagged {
   version = "0.16.0";
   sha256  = "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00";
 })
@@ -96,7 +103,7 @@ Lowest-level escape hatch — for mirrors, self-hosted builds, or any URL
 that doesn't fit the standard ziglang.org layout.
 
 #+begin_src nix
-(zignix.lib.${system}.fromUrl {
+(zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromUrl {
   version = "0.17.0-dev.612-mybuild";
   url     = "https://my-mirror/zig-x86_64-linux-0.17.0-dev.612+abc.tar.xz";
   sha256  = "...";
