@@ -1,0 +1,161 @@
+{ system, pkgs, lib }:
+
+###========================================
+##   zignix library
+#==========================================
+#
+# Helpers for building Zig derivations from arbitrary upstream tarballs.
+#
+# The headline use case: pin any nightly `master` build by version+sha256
+# without waiting for a curated sources file. Two entry points:
+#
+#   fromBuild  — for builds on ziglang.org/builds (URL derived from version)
+#   fromUrl    — for arbitrary tarball URLs (mirrors, custom builds)
+#
+# Both return a stdenv derivation that drops the upstream tarball into
+# $out, matching the layout the mitchellh/zig-overlay produces so consuming
+# projects can swap drop-in.
+
+let
+
+  ###----------------------------------------
+  ##   System → (arch, os) for URL synthesis
+  #------------------------------------------
+  systemMap = {
+    "x86_64-linux"   = { arch = "x86_64";  os = "linux"; ext = "tar.xz"; };
+    "aarch64-linux"  = { arch = "aarch64"; os = "linux"; ext = "tar.xz"; };
+    "x86_64-darwin"  = { arch = "x86_64";  os = "macos"; ext = "tar.xz"; };
+    "aarch64-darwin" = { arch = "aarch64"; os = "macos"; ext = "tar.xz"; };
+  };
+
+  sysInfo =
+    if systemMap ? ${system} then systemMap.${system}
+    else throw "zignix: unsupported system '${system}'. Supported: ${
+      lib.concatStringsSep ", " (lib.attrNames systemMap)
+    }";
+
+  ###----------------------------------------
+  ##   Core derivation builder
+  #------------------------------------------
+  #
+  # Mirrors mitchellh/zig-overlay's `mkBinaryInstall` shape so the result
+  # is API-compatible. Patches `/usr/bin/env` in std/zig/system.zig to the
+  # nixpkgs coreutils env binary for sandbox-friendliness.
+  mkZig = { version, url, sha256 }:
+    pkgs.stdenvNoCC.mkDerivation {
+      pname = "zig";
+      inherit version;
+
+      src = pkgs.fetchurl { inherit url sha256; };
+
+      dontConfigure = true;
+      dontBuild = true;
+      dontFixup = true;
+
+      installPhase = ''
+        runHook preInstall
+
+        mkdir -p $out/{bin,lib,doc}
+        cp -r ./lib/* $out/lib/
+        [ -d ./doc ] && cp -r ./doc/* $out/doc/ || true
+        install -m755 ./zig $out/bin/zig
+
+        # Make Zig's system-info path work under pure Nix builders.
+        if [ -f "$out/lib/std/zig/system.zig" ]; then
+          substituteInPlace $out/lib/std/zig/system.zig \
+            --replace "/usr/bin/env" "${lib.getExe' pkgs.coreutils "env"}"
+        fi
+
+        runHook postInstall
+      '';
+
+      meta = {
+        description = "Zig compiler, pinned by zignix";
+        homepage = "https://ziglang.org";
+        license = lib.licenses.mit;
+        mainProgram = "zig";
+        platforms = lib.attrNames systemMap;
+      };
+    };
+
+  ###----------------------------------------
+  ##   URL synthesis from a version string
+  #------------------------------------------
+  #
+  # Modern Zig tarballs (>= 0.14) live at:
+  #   https://ziglang.org/builds/zig-<arch>-<os>-<version>.<ext>
+  #
+  # Tagged releases ALSO follow this pattern at /download/<version>/
+  # rather than /builds/. We default to /builds/ which matches dev
+  # nightlies; consumers wanting a tagged release should pass an explicit
+  # `url` via `fromUrl`, or override `urlBase`.
+  mkUrl = { version, urlBase ? "https://ziglang.org/builds" }:
+    "${urlBase}/zig-${sysInfo.arch}-${sysInfo.os}-${version}.${sysInfo.ext}";
+
+in
+{
+
+  ###----------------------------------------
+  ##   fromBuild — pin by version + sha256
+  #------------------------------------------
+  #
+  # Example:
+  #   zignix.lib.${system}.fromBuild {
+  #     version = "0.17.0-dev.607+456b2ec07";
+  #     sha256  = "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33";
+  #   }
+  #
+  # The sha256 can be set to `lib.fakeHash` while bootstrapping; Nix will
+  # error out with the real hash for you to paste back.
+  fromBuild =
+    { version
+    , sha256
+    , urlBase ? "https://ziglang.org/builds"
+    }:
+    mkZig {
+      inherit version sha256;
+      url = mkUrl { inherit version urlBase; };
+    };
+
+  ###----------------------------------------
+  ##   fromUrl — arbitrary tarball
+  #------------------------------------------
+  #
+  # For mirrors, self-hosted builds, or tagged releases at
+  # /download/<version>/ (the older URL shape).
+  #
+  # Example:
+  #   zignix.lib.${system}.fromUrl {
+  #     version = "0.16.0";
+  #     url     = "https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz";
+  #     sha256  = "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00";
+  #   }
+  fromUrl = { version, url, sha256 }: mkZig { inherit version url sha256; };
+
+  ###----------------------------------------
+  ##   fromTagged — tagged release sugar
+  #------------------------------------------
+  #
+  # Convenience wrapper that constructs the /download/<version>/ URL used
+  # by tagged releases. Saves spelling the full URL.
+  #
+  # Example:
+  #   zignix.lib.${system}.fromTagged {
+  #     version = "0.16.0";
+  #     sha256  = "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00";
+  #   }
+  fromTagged = { version, sha256 }:
+    mkZig {
+      inherit version sha256;
+      url = mkUrl {
+        inherit version;
+        urlBase = "https://ziglang.org/download/${version}";
+      };
+    };
+
+  ###----------------------------------------
+  ##   Re-exports for downstream consumers
+  #------------------------------------------
+  inherit systemMap;
+  fakeHash = lib.fakeHash;
+}
