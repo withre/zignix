@@ -21,17 +21,43 @@ the shasum from [[https://ziglang.org/download/index.json][ziglang.org/download/
 
 ** Add zignix to your flake
 
-The lib index is keyed by system, so use ~pkgs.stdenv.hostPlatform.system~
-from the appropriate ~pkgs~ for each output rather than threading a bare
-~system~ string through your flake. This keeps the same expression valid
-under cross-compilation and across all supported hosts.
+The lib index is keyed by system, so always derive the system from
+~pkgs.stdenv.hostPlatform.system~. *Where* you get ~pkgs~ depends on
+how your flake is structured.
+
+*** With blueprint, flake-parts, or any framework that gives you ~pkgs~
+
+No system enumeration to write — blueprint hands each output file a
+~pkgs~ already bound to the right system. This is also the style
+zignix itself uses internally, and the shape of the worked example
+at [[file:examples/pin-specific-build/][examples/pin-specific-build/]]:
+
+#+begin_src nix
+# nix/packages/zig/default.nix
+{ pkgs, inputs, ... }:
+
+inputs.zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
+  version = "0.17.0-dev.607+456b2ec07";
+  sha256 = {
+    x86_64-linux   = "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33";
+    aarch64-linux  = "96a1465b932e23eebcd9598c82d319d316b41529b6e0ef1bcff48eaf5e3cb15a";
+    x86_64-darwin  = "3315ff00c1d90d2472c1bef7b583e3a1adb4b9160b3452aad828b077ad7dd5fa";
+    aarch64-darwin = "4f3143fa5a9723754b9516be6f9bc23fda2743abf1144570ae67ac875f5d2a09";
+  }.${pkgs.stdenv.hostPlatform.system};
+}
+#+end_src
+
+*** Without a framework (plain flake)
+
+A bare ~flake.nix~ has no ~pkgs~ until you instantiate one per system,
+so you do need a small enumeration helper:
 
 #+begin_src nix
 {
   inputs.zignix.url = "github:youruser/zignix";
-  # ... your other inputs ...
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
 
-  outputs = { self, nixpkgs, zignix, ... }:
+  outputs = { self, nixpkgs, zignix }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
@@ -39,7 +65,7 @@ under cross-compilation and across all supported hosts.
       zigFor = pkgs:
         zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
           version = "0.17.0-dev.607+456b2ec07";
-          sha256  = "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33";
+          sha256 = "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33";
         };
     in {
       devShells = forAllSystems (system:
@@ -50,27 +76,51 @@ under cross-compilation and across all supported hosts.
 }
 #+end_src
 
-** Bootstrap a new version
-
-Don't know the sha256 yet? Set it to ~lib.fakeHash~ (or any obviously
-wrong value) and let Nix tell you the right one:
+If you only target one host, drop the helper and inline the system:
 
 #+begin_src nix
-(zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
-  version = "0.17.0-dev.612+abcdef012";
-  sha256  = nixpkgs.lib.fakeHash;
-})
+let
+  pkgs = nixpkgs.legacyPackages.x86_64-linux;
+  zig = zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
+    version = "0.17.0-dev.607+456b2ec07";
+    sha256 = "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33";
+  };
+in { devShells.x86_64-linux.default = pkgs.mkShell { packages = [ zig ]; }; }
 #+end_src
 
-Run ~nix build~ — Nix will fail with the actual hash, which you paste
-back in.
+** Where do ~version~ and ~sha256~ come from?
 
-Or look it up directly:
+Upstream Zig publishes both at
+[[https://ziglang.org/download/index.json]] under the ~.master~ key.
 
 #+begin_src bash
 curl -s https://ziglang.org/download/index.json \
-  | jq -r '.master | .version, ."x86_64-linux".shasum'
+  | jq '.master | {
+      version,
+      x86_64_linux:   ."x86_64-linux".shasum,
+      aarch64_linux:  ."aarch64-linux".shasum,
+      x86_64_darwin:  ."x86_64-macos".shasum,
+      aarch64_darwin: ."aarch64-macos".shasum
+    }'
 #+end_src
+
+Example output:
+
+#+begin_src json
+{
+  "version": "0.17.0-dev.607+456b2ec07",
+  "x86_64_linux":   "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33",
+  "aarch64_linux":  "96a1465b932e23eebcd9598c82d319d316b41529b6e0ef1bcff48eaf5e3cb15a",
+  "x86_64_darwin":  "3315ff00c1d90d2472c1bef7b583e3a1adb4b9160b3452aad828b077ad7dd5fa",
+  "aarch64_darwin": "4f3143fa5a9723754b9516be6f9bc23fda2743abf1144570ae67ac875f5d2a09"
+}
+#+end_src
+
+Drop those values straight into the snippet above. To bump, re-run the
+command.
+
+Don't want to look it up? Set ~sha256~ to ~nixpkgs.lib.fakeHash~ and run
+~nix build~ — Nix will fail with the real hash for you to paste back.
 
 * API
 
