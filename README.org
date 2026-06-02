@@ -1,191 +1,226 @@
-#+title: zignix
-#+html: <p><img src="https://img.shields.io/badge/Status-experimental-orange" alt="experimental"> <img src="https://img.shields.io/badge/Zig-any%20build-orange?logo=zig" alt="Zig any build"></p>
+#+TITLE: zignix
+#+OPTIONS: toc:2 num:nil ^:nil
 
-A Nix overlay for Zig that lets you pin *any* upstream build — including
-nightlies that haven't been ingested into curated source lists yet.
+#+html:<div align="center">
+#+html:<p>Pin any upstream Zig build with Nix, without waiting for a curated source list.</p>
+#+html:<p>
+#+html:<img src="https://img.shields.io/badge/Status-experimental-orange?style=flat-square" alt="experimental">
+#+html:<img src="https://img.shields.io/badge/Zig-any%20build-orange?style=flat-square&logo=zig" alt="Zig any build">
+#+html:<img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT License">
+#+html:</p>
+#+html:</div>
 
-* Why
+-----
 
-The popular [[https://github.com/mitchellh/zig-overlay][mitchellh/zig-overlay]] is a curated mirror: it serves whatever
-its update bot has imported into ~sources.json~. When you want a Zig
-nightly that just landed upstream, you wait for the bot to catch up
-(sometimes days). For projects tracking the unreleased ~master~ line
-closely, that's a real source of friction.
+** 🌄 Overview
 
-*zignix* takes a different approach: the consumer flake supplies
-~{ version, sha256 }~ directly, and zignix synthesises the upstream URL
-and produces a derivation. No PR to upstream required — just paste in
-the shasum from [[https://ziglang.org/download/index.json][ziglang.org/download/index.json]].
+*zignix* is a tiny Nix helper for pinning Zig binaries by ~version~ and
+Nix ~sha256~.
 
-* Quickstart
+It exists for the moment when a Zig nightly is already available from
+upstream, but a curated overlay has not indexed it yet. Your project owns
+the exact Zig pin; zignix only turns that pin into the expected Zig binary
+package.
 
-** Add zignix to your flake
+** 🚀 Quick Start
 
-The lib index is keyed by system, so always derive the system from
-~pkgs.stdenv.hostPlatform.system~. *Where* you get ~pkgs~ depends on
-how your flake is structured.
-
-*** With blueprint, flake-parts, or any framework that gives you ~pkgs~
-
-No system enumeration to write — blueprint hands each output file a
-~pkgs~ already bound to the right system. This is also the style
-zignix itself uses internally, and the shape of the worked example
-at [[file:examples/pin-specific-build/][examples/pin-specific-build/]]:
+This example uses the latest known upstream ~master~ build for
+~x86_64-linux~.
 
 #+begin_src nix
 # nix/packages/zig/default.nix
 { pkgs, inputs, ... }:
 
 inputs.zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
-  version = "0.17.0-dev.607+456b2ec07";
-  sha256 = {
-    x86_64-linux   = "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33";
-    aarch64-linux  = "96a1465b932e23eebcd9598c82d319d316b41529b6e0ef1bcff48eaf5e3cb15a";
-    x86_64-darwin  = "3315ff00c1d90d2472c1bef7b583e3a1adb4b9160b3452aad828b077ad7dd5fa";
-    aarch64-darwin = "4f3143fa5a9723754b9516be6f9bc23fda2743abf1144570ae67ac875f5d2a09";
-  }.${pkgs.stdenv.hostPlatform.system};
+  version = "0.17.0-dev.657+2faf8debf";
+  sha256 = "sha256-9CBhMgHNzXZ4NWCZ8M12zlEZMdth7rHyptmhVjFq6io=";
 }
 #+end_src
 
-*** Without a framework (plain flake)
+Use the hash for the system you build on. See *Usage* for folded examples
+and hash lookup commands.
 
-A bare ~flake.nix~ has no ~pkgs~ until you instantiate one per system,
-so you do need a small enumeration helper:
+** 📦 Usage
+
+*** Installation
+
+#+html:<details>
+#+html:<summary><b>Add zignix as a flake input</b></summary>
+#+html:<br>
 
 #+begin_src nix
 {
-  inputs.zignix.url = "github:youruser/zignix";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
+  inputs.zignix.url = "github:rytswd/zignix";
+}
+#+end_src
 
-  outputs = { self, nixpkgs, zignix }:
+You do not need to clone this repository. Nix fetches zignix from GitHub
+as part of normal flake evaluation.
+
+After that, pick the pattern matching your flake shape.
+
+#+html:</details>
+
+#+html:<details>
+#+html:<summary><b>Framework flake with pkgs already provided</b></summary>
+#+html:<br>
+
+Use this with blueprint, flake-parts, or similar frameworks. The Quick
+Start snippet shows this pattern.
+
+#+html:</details>
+
+#+html:<details>
+#+html:<summary><b>Plain flake without a framework</b></summary>
+#+html:<br>
+
+A plain flake needs to instantiate nixpkgs per system before calling
+zignix.
+
+#+begin_src nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
+  inputs.zignix.url = "github:rytswd/zignix";
+
+  outputs = { nixpkgs, zignix, ... }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
-
-      zigFor = pkgs:
-        zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
-          version = "0.17.0-dev.607+456b2ec07";
-          sha256 = "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33";
-        };
     in {
       devShells = forAllSystems (system:
-        let pkgs = nixpkgs.legacyPackages.${system}; in {
-          default = pkgs.mkShell { packages = [ (zigFor pkgs) ]; };
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          zig = zignix.lib.${system}.fromBuild {
+            version = "0.17.0-dev.657+2faf8debf";
+            sha256 = "sha256-9CBhMgHNzXZ4NWCZ8M12zlEZMdth7rHyptmhVjFq6io=";
+          };
+        in {
+          default = pkgs.mkShell { packages = [ zig ]; };
         });
     };
 }
 #+end_src
 
-If you only target one host, drop the helper and inline the system:
+#+html:</details>
+
+*** Try it
+
+#+html:<details>
+#+html:<summary><b>Run with <code>nix shell</code></b></summary>
+#+html:<br>
+
+Run the bundled latest Zig package directly from GitHub:
+
+#+begin_src sh
+nix shell github:rytswd/zignix#zig-master -c zig version
+#+end_src
+
+From a local checkout, use the local flake instead:
+
+#+begin_src sh
+nix shell .#zig-master -c zig version
+#+end_src
+
+The printed version should match the pin in the Quick Start example.
+
+#+html:</details>
+
+*** Pin values
+
+#+html:<details>
+#+html:<summary><b>Get the latest version and sha256</b></summary>
+#+html:<br>
+
+Zig publishes the latest nightly under ~.master~ in
+[[https://ziglang.org/download/index.json][ziglang.org/download/index.json]]. The index stores hex ~shasum~ values,
+so convert the one for your system to Nix SRI format before using it as
+~sha256~.
+
+#+begin_src sh
+# version
+curl -s https://ziglang.org/download/index.json \
+  | jq -r '.master.version'
+
+# sha256 for x86_64-linux
+curl -s https://ziglang.org/download/index.json \
+  | jq -r '.master."x86_64-linux".shasum' \
+  | xargs nix hash convert --hash-algo sha256 --to sri
+#+end_src
+
+System key mapping:
+
+| zignix system    | Zig index key    |
+|------------------+------------------|
+| ~x86_64-linux~   | ~x86_64-linux~   |
+| ~aarch64-linux~  | ~aarch64-linux~  |
+| ~x86_64-darwin~  | ~x86_64-macos~   |
+| ~aarch64-darwin~ | ~aarch64-macos~  |
+
+#+html:</details>
+
+#+html:<details>
+#+html:<summary><b>Let Nix tell you the expected sha256</b></summary>
+#+html:<br>
+
+If you do not want to convert the upstream shasum yourself, use a fake
+hash first:
 
 #+begin_src nix
-let
-  pkgs = nixpkgs.legacyPackages.x86_64-linux;
-  zig = zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
-    version = "0.17.0-dev.607+456b2ec07";
-    sha256 = "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33";
-  };
-in { devShells.x86_64-linux.default = pkgs.mkShell { packages = [ zig ]; }; }
-#+end_src
-
-** Where do ~version~ and ~sha256~ come from?
-
-Upstream Zig publishes both at
-[[https://ziglang.org/download/index.json]] under the ~.master~ key.
-
-#+begin_src bash
-curl -s https://ziglang.org/download/index.json \
-  | jq '.master | {
-      version,
-      x86_64_linux:   ."x86_64-linux".shasum,
-      aarch64_linux:  ."aarch64-linux".shasum,
-      x86_64_darwin:  ."x86_64-macos".shasum,
-      aarch64_darwin: ."aarch64-macos".shasum
-    }'
-#+end_src
-
-Example output:
-
-#+begin_src json
-{
-  "version": "0.17.0-dev.607+456b2ec07",
-  "x86_64_linux":   "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33",
-  "aarch64_linux":  "96a1465b932e23eebcd9598c82d319d316b41529b6e0ef1bcff48eaf5e3cb15a",
-  "x86_64_darwin":  "3315ff00c1d90d2472c1bef7b583e3a1adb4b9160b3452aad828b077ad7dd5fa",
-  "aarch64_darwin": "4f3143fa5a9723754b9516be6f9bc23fda2743abf1144570ae67ac875f5d2a09"
+zignix.lib.${system}.fromBuild {
+  version = "0.17.0-dev.657+2faf8debf";
+  sha256 = zignix.lib.${system}.fakeHash;
 }
 #+end_src
 
-Drop those values straight into the snippet above. To bump, re-run the
-command.
+Then run ~nix build~. Nix fails with the expected ~sha256~ value, which
+you can paste back into the pin.
 
-Don't want to look it up? Set ~sha256~ to ~nixpkgs.lib.fakeHash~ and run
-~nix build~ — Nix will fail with the real hash for you to paste back.
+#+html:</details>
 
-* API
+*** Other patterns
 
-All helpers live under ~zignix.lib.${system}~.
+#+html:<details>
+#+html:<summary><b>Tagged releases and custom URLs</b></summary>
+#+html:<br>
 
-** ~fromBuild { version, sha256, urlBase? }~
-
-The headline use case. Synthesises the URL
-~https://ziglang.org/builds/zig-<arch>-<os>-<version>.tar.xz~ and
-produces a derivation.
-
-This is the right entry point for *nightly* (~master~) builds — those
-all live under ~/builds/~.
-
-** ~fromTagged { version, sha256 }~
-
-Sugar for tagged releases, which live at
-~https://ziglang.org/download/<version>/~ rather than ~/builds/~.
+~fromBuild~ is for Zig ~master~ builds under ~https://ziglang.org/builds~.
+For tagged releases and custom mirrors:
 
 #+begin_src nix
-(zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromTagged {
+zignix.lib.${system}.fromTagged {
   version = "0.16.0";
-  sha256  = "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00";
-})
+  sha256 = "sha256-cOSWZKdDdLSLUebz/fv0N/Y5XUJQkFBYi9SavlK6PQA=";
+}
 #+end_src
-
-** ~fromUrl { version, url, sha256 }~
-
-Lowest-level escape hatch — for mirrors, self-hosted builds, or any URL
-that doesn't fit the standard ziglang.org layout.
 
 #+begin_src nix
-(zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromUrl {
-  version = "0.17.0-dev.612-mybuild";
-  url     = "https://my-mirror/zig-x86_64-linux-0.17.0-dev.612+abc.tar.xz";
-  sha256  = "...";
-})
+zignix.lib.${system}.fromUrl {
+  version = "0.17.0-dev.612+abc";
+  url = "https://my-mirror/zig-x86_64-linux-0.17.0-dev.612+abc.tar.xz";
+  sha256 = "...";
+}
 #+end_src
 
-* Comparison
+#+html:</details>
 
-| Feature                              | mitchellh/zig-overlay | zignix             |
-|--------------------------------------+-----------------------+--------------------|
-| Tagged releases (0.x.y)              | ✅                    | ✅ (~fromTagged~)  |
-| Nightly already in upstream index    | ✅                    | ✅ (~fromBuild~)   |
-| Nightly *not yet* in upstream index  | ❌                    | ✅ (~fromBuild~)   |
-| Self-hosted / mirror builds          | ❌                    | ✅ (~fromUrl~)     |
-| Static sources.json (offline-OK)     | ✅                    | ✅ (per-project)   |
-| Cached aggregated `master-<date>`    | ✅                    | ❌ (out of scope)  |
+** ⚖️ Comparison
 
-zignix is intentionally smaller in scope. If you want a one-stop
-catalogue of every Zig release ever cut, use mitchellh's. If you want
-the smallest surface area that lets you pin *any* upstream build the
-day it lands, use zignix.
+[[https://github.com/mitchellh/zig-overlay][mitchellh/zig-overlay]] is the right choice when you want a curated
+catalogue of Zig builds ready to reference.
 
-* Supported systems
+zignix is intentionally narrower: it gives you a small function that
+builds the upstream URL from your explicit ~version~ and ~sha256~. That
+means a new nightly can be used as soon as Zig publishes it, without
+waiting for this repository or any overlay index to update.
 
-- ~x86_64-linux~
-- ~aarch64-linux~
-- ~x86_64-darwin~
-- ~aarch64-darwin~
+| Need                                | zig-overlay | zignix |
+|-------------------------------------+-------------+--------|
+| Curated catalogue                   | ✅          | ❌     |
+| Pin a just-published upstream build | Depends     | ✅     |
+| Project-owned version/hash          | ✅          | ✅     |
+| Custom mirror URL                   | ❌          | ✅     |
 
-Other systems are not currently mapped; PRs welcome — see ~nix/lib/default.nix~,
-the ~systemMap~ attrset.
-
-* License
+** 📄 License
 
 MIT. See [[file:LICENSE][LICENSE]].

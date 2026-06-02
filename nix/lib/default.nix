@@ -101,8 +101,8 @@ in
   #
   # Example:
   #   zignix.lib.${system}.fromBuild {
-  #     version = "0.17.0-dev.607+456b2ec07";
-  #     sha256  = "19275107de7b89ec33d29b50f00997c1381c524d1e33b728472dcbd551da2e33";
+  #     version = "0.17.0-dev.657+2faf8debf";
+  #     sha256  = "sha256-9CBhMgHNzXZ4NWCZ8M12zlEZMdth7rHyptmhVjFq6io=";
   #   }
   #
   # The sha256 can be set to `lib.fakeHash` while bootstrapping; Nix will
@@ -128,7 +128,7 @@ in
   #   zignix.lib.${system}.fromUrl {
   #     version = "0.16.0";
   #     url     = "https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz";
-  #     sha256  = "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00";
+  #     sha256  = "sha256-cOSWZKdDdLSLUebz/fv0N/Y5XUJQkFBYi9SavlK6PQA=";
   #   }
   fromUrl = { version, url, sha256 }: mkZig { inherit version url sha256; };
 
@@ -142,7 +142,7 @@ in
   # Example:
   #   zignix.lib.${system}.fromTagged {
   #     version = "0.16.0";
-  #     sha256  = "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00";
+  #     sha256  = "sha256-cOSWZKdDdLSLUebz/fv0N/Y5XUJQkFBYi9SavlK6PQA=";
   #   }
   fromTagged = { version, sha256 }:
     mkZig {
