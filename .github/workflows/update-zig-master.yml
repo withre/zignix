@@ -1,0 +1,53 @@
+name: Update Zig master pin
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-zig-master-pin
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Update pin
+        run: python3 scripts/update-zig-master-pins.py
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet -- nix/packages/zig-master/default.nix; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify build
+        if: steps.changes.outputs.changed == 'true'
+        run: nix build .#zig-master
+
+      - name: Commit and push
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          version=$(grep -m1 'version = ' nix/packages/zig-master/default.nix | cut -d'"' -f2)
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add nix/packages/zig-master/default.nix
+          git commit -m "Update Zig master pin to ${version}"
+          git push
