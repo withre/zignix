@@ -32,8 +32,8 @@ This example uses the latest known upstream ~master~ build for
 { pkgs, inputs, ... }:
 
 inputs.zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
-  version = "0.17.0-dev.657+2faf8debf";
-  sha256 = "sha256-9CBhMgHNzXZ4NWCZ8M12zlEZMdth7rHyptmhVjFq6io=";
+  version = "0.17.0-dev.667+0569f1f6a";
+  sha256 = "sha256-mG5owYYUWLIc6SKaTQlNjBTh4c9LGmDyjk37cLFxRvc=";
 }
 #+end_src
 
@@ -92,8 +92,8 @@ zignix.
         let
           pkgs = nixpkgs.legacyPackages.${system};
           zig = zignix.lib.${system}.fromBuild {
-            version = "0.17.0-dev.657+2faf8debf";
-            sha256 = "sha256-9CBhMgHNzXZ4NWCZ8M12zlEZMdth7rHyptmhVjFq6io=";
+            version = "0.17.0-dev.667+0569f1f6a";
+            sha256 = "sha256-mG5owYYUWLIc6SKaTQlNjBTh4c9LGmDyjk37cLFxRvc=";
           };
         in {
           default = pkgs.mkShell { packages = [ zig ]; };
