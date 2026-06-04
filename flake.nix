@@ -21,6 +21,8 @@
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       eachSystem = f: builtins.listToAttrs (map (s: { name = s; value = f s; }) systems);
     in
+    # blueprint does not emit a `lib` output, so this // is a safe add
+    # rather than an override. Revisit if that ever changes.
     bp // {
       lib = eachSystem (system:
         import ./lib/default.nix {

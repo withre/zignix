@@ -55,9 +55,11 @@ let
       installPhase = ''
         runHook preInstall
 
-        mkdir -p $out/{bin,lib,doc}
+        mkdir -p $out/{bin,lib}
         cp -r ./lib/* $out/lib/
-        [ -d ./doc ] && cp -r ./doc/* $out/doc/ || true
+        if [ -d ./doc ]; then
+          cp -r ./doc $out/doc
+        fi
         install -m755 ./zig $out/bin/zig
 
         # Make Zig's system-info path work under pure Nix builders.

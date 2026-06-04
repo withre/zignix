@@ -80,7 +80,7 @@ waiting for this repository or any overlay index to update.
 Run the bundled latest Zig package directly from GitHub:
 
 #+begin_src sh
-  nix shell github:rytswd/zignix#zig-master -c zig version
+  nix shell github:withre/zignix#zig-master -c zig version
 #+end_src
 
 From a local checkout, use the local flake instead:
@@ -137,7 +137,7 @@ there is expected — the Nix commands above use the pinned compiler.
 #+begin_src nix
   {
     inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
-    inputs.zignix.url = "github:rytswd/zignix";
+    inputs.zignix.url = "github:withre/zignix";
   }
 #+end_src
 
@@ -160,7 +160,7 @@ zignix.
 #+begin_src nix
   {
     inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
-    inputs.zignix.url = "github:rytswd/zignix";
+    inputs.zignix.url = "github:withre/zignix";
 
     outputs = { nixpkgs, zignix, ... }:
       let
@@ -207,8 +207,8 @@ keyed by ~${pkgs.stdenv.hostPlatform.system}~):
 #+html:<summary><b>Home Manager — repo-maintained builds</b></summary>
 #+html:<br>
 
-No version or hash to write yourself. Use ~zig-master~ for the latest
-nightly or ~zig-0.16~ for the latest 0.16 release.
+No version or hash to write yourself. Use the ~zig-master~ package for
+the latest nightly or ~zig-0_16~ for the latest 0.16 release.
 
 #+begin_src nix
   # home.nix
@@ -222,11 +222,12 @@ nightly or ~zig-0.16~ for the latest 0.16 release.
 #+end_src
 
 Or via the overlay, which exposes ~pkgs.zignix.master~ and
-~pkgs.zignix."0.16"~:
+~pkgs.zignix."0.16"~ (pass ~zignix~ to the module so the overlay is in
+scope):
 
 #+begin_src nix
   # home.nix
-  { pkgs, ... }:
+  { pkgs, zignix, ... }:
   {
     nixpkgs.overlays = [ zignix.overlays.default ];
     home.packages = [ pkgs.zignix.master ];

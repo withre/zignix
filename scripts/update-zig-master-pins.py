@@ -121,16 +121,33 @@ def update_readme(
 ) -> bool:
     text = readme_file.read_text()
 
-    updated, count = re.subn(
-        r'(fromBuild \{\n\s*)version = "0\.17\.0-dev\.[^"]+";\n(\s*)sha256 = "sha256-[A-Za-z0-9+/=]+";',
+    # Matches any X.Y.Z-dev.* master version, so a future major bump
+    # (e.g. 0.18.0-dev) keeps updating instead of silently failing.
+    dev_quoted = r'[0-9]+\.[0-9]+\.[0-9]+-dev\.[^"]+'
+    dev_cell = r'[0-9]+\.[0-9]+\.[0-9]+-dev\.[^~]+'
+
+    # fromBuild blocks that pin version + a real SRI hash (Quick Start
+    # and the plain-flake example).
+    updated, sri_count = re.subn(
+        rf'(fromBuild \{{\n\s*)version = "{dev_quoted}";\n(\s*)sha256 = "sha256-[A-Za-z0-9+/=]+";',
         rf'\1version = "{master_version}";\n\2sha256 = "{master_x86_64_linux_hash}";',
         text,
     )
-    if count == 0:
-        raise RuntimeError(f"could not find Quick Start pin in {readme_file}")
+    if sri_count == 0:
+        raise RuntimeError(f"could not find a fromBuild SRI pin in {readme_file}")
+
+    # fromBuild block that uses fakeHash (the bootstrap example) — keep its
+    # version current even though the hash is intentionally a placeholder.
+    updated, fake_count = re.subn(
+        rf'(fromBuild \{{\n\s*)version = "{dev_quoted}";\n(\s*sha256 = zignix\.lib\.\$\{{system\}}\.fakeHash;)',
+        rf'\1version = "{master_version}";\n\2',
+        updated,
+    )
+    if fake_count == 0:
+        raise RuntimeError(f"could not find fakeHash example in {readme_file}")
 
     updated, master_rows = re.subn(
-        r'(\| ~zig-master~\s+\|[^|]*\| )~0\.17\.0-dev\.[^~]+~',
+        rf'(\| ~zig-master~\s+\|[^|]*\| )~{dev_cell}~',
         rf'\g<1>~{master_version}~',
         updated,
     )

@@ -1,4 +1,4 @@
-name: Update Zig master pin
+name: Update Zig pins
 
 on:
   schedule:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: update-zig-master-pin
+  group: update-zig-pins
   cancel-in-progress: false
 
 jobs:
@@ -25,29 +25,38 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - name: Update pin
+      - name: Update pins
         run: python3 scripts/update-zig-master-pins.py
 
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet -- packages/zig-master/default.nix README.org; then
+          if git diff --quiet -- \
+            packages/zig-master/default.nix \
+            packages/zig-0_16/default.nix \
+            README.org; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Verify build
+      - name: Verify builds
         if: steps.changes.outputs.changed == 'true'
-        run: nix build .#zig-master
+        # Only x86_64-linux is built here. The other systems' hashes are
+        # deterministic conversions of upstream shasums (see the update
+        # script), so they are not fetched/built on this runner.
+        run: nix build .#zig-master .#zig-0_16
 
       - name: Commit and push
         if: steps.changes.outputs.changed == 'true'
         run: |
-          version=$(grep -m1 'version = ' packages/zig-master/default.nix | cut -d'"' -f2)
+          master=$(grep -m1 'version = ' packages/zig-master/default.nix | cut -d'"' -f2)
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add packages/zig-master/default.nix README.org
-          git commit -m "Update Zig master pin to ${version}"
+          git add \
+            packages/zig-master/default.nix \
+            packages/zig-0_16/default.nix \
+            README.org
+          git commit -m "Update Zig pins (master ${master})"
           git push
