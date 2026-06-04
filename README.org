@@ -281,7 +281,9 @@ Pin it yourself with ~fromBuild~ (nightly) or ~fromTagged~ (release). See
 
 Every zignix package installs a binary called ~zig~, so two of them would
 collide on ~PATH~. Use ~zignix.lib.${system}.withName~ to expose each
-under its own command name. You decide which one is the bare ~zig~.
+under its own command name (the same helper works in any ~PATH~ context —
+see *Other patterns* for a ~devShell~ example). You decide which one is
+the bare ~zig~.
 
 #+begin_src nix
   # home.nix
@@ -380,6 +382,43 @@ For tagged releases and custom mirrors:
     sha256 = "...";
   }
 #+end_src
+
+#+html:</details>
+
+#+html:<details>
+#+html:<summary><b>Rename a compiler binary with <code>withName</code></b></summary>
+#+html:<br>
+
+~withName~ is not Home-Manager specific. Every zignix package ships its
+compiler as a binary called ~zig~, so putting two of them on one ~PATH~ —
+a ~devShell~, a ~buildInputs~ list, ~environment.systemPackages~, or
+~home.packages~ — collides. ~zignix.lib.${system}.withName "<cmd>" <pkg>~
+returns a copy of any zignix package whose binary is renamed to ~<cmd>~,
+so each version gets its own command name. You decide which one keeps the
+bare ~zig~.
+
+For example, a blueprint-style ~devShell~ offering the latest ~master~ as ~zig~ alongside the 0.16 release as ~zig-0.16~:
+
+#+begin_src nix
+  # nix/devshell.nix
+  { pkgs, inputs, system }:
+  let
+    zig = inputs.zignix.lib.${system};
+    pkgsFor = inputs.zignix.packages.${system};
+  in
+  pkgs.mkShell {
+    packages = [
+      pkgsFor.zig-master                          # bare `zig`
+      (zig.withName "zig-0.16" pkgsFor.zig-0_16)  # `zig-0.16`
+    ];
+  }
+#+end_src
+
+Because the 0.16 binary is renamed, there is no ~zig~ collision and the
+order of the ~packages~ list no longer matters. Without ~withName~ you
+would otherwise hand-roll a ~pkgs.writeShellScriptBin "zig-0.16"~ wrapper
+and rely on list ordering for the bare ~zig~ to win. ~withName~ accepts
+any zignix package, including a ~fromBuild~ / ~fromTagged~ pin.
 
 #+html:</details>
 
