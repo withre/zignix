@@ -2,3 +2,5 @@ result
 .direnv/
 __pycache__/
 *.py[cod]
+.zig-cache/
+zig-out/

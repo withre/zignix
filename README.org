@@ -42,6 +42,62 @@ and hash lookup commands.
 
 ** 📦 Usage
 
+*** Try it
+
+#+html:<details>
+#+html:<summary><b>Run with <code>nix shell</code></b></summary>
+#+html:<br>
+
+Run the bundled latest Zig package directly from GitHub:
+
+#+begin_src sh
+nix shell github:rytswd/zignix#zig-master -c zig version
+#+end_src
+
+From a local checkout, use the local flake instead:
+
+#+begin_src sh
+nix shell .#zig-master -c zig version
+#+end_src
+
+The printed version should match the pin in the Quick Start example.
+
+#+html:</details>
+
+#+html:<details>
+#+html:<summary><b>Build the example project</b></summary>
+#+html:<br>
+
+The example at [[file:examples/pin-specific-build/][examples/pin-specific-build/]] pins its own Zig build and compiles a tiny
+Zig program that prints the compiler version used, then compares it with
+the version pinned in the example.
+
+Build and run it through Nix:
+
+#+begin_src sh
+nix build ./examples/pin-specific-build#hello --no-link
+nix run ./examples/pin-specific-build#hello
+#+end_src
+
+Check the pinned Zig CLI directly:
+
+#+begin_src sh
+nix shell ./examples/pin-specific-build#zig -c zig version
+#+end_src
+
+Or run the example's ~build.zig~ with that pinned compiler:
+
+#+begin_src sh
+cd examples/pin-specific-build
+nix shell .#zig -c zig build run
+#+end_src
+
+The output shows the compiler version in use next to the example pin. A
+plain ~zig build run~ uses whatever Zig is on your =PATH=, so a mismatch
+there is expected — the Nix commands above use the pinned compiler.
+
+#+html:</details>
+
 *** Installation
 
 #+html:<details>
@@ -104,28 +160,6 @@ zignix.
 
 #+html:</details>
 
-*** Try it
-
-#+html:<details>
-#+html:<summary><b>Run with <code>nix shell</code></b></summary>
-#+html:<br>
-
-Run the bundled latest Zig package directly from GitHub:
-
-#+begin_src sh
-nix shell github:rytswd/zignix#zig-master -c zig version
-#+end_src
-
-From a local checkout, use the local flake instead:
-
-#+begin_src sh
-nix shell .#zig-master -c zig version
-#+end_src
-
-The printed version should match the pin in the Quick Start example.
-
-#+html:</details>
-
 *** Pin values
 
 #+html:<details>
@@ -168,7 +202,7 @@ hash first:
 
 #+begin_src nix
 zignix.lib.${system}.fromBuild {
-  version = "0.17.0-dev.657+2faf8debf";
+  version = "0.17.0-dev.667+0569f1f6a";
   sha256 = zignix.lib.${system}.fakeHash;
 }
 #+end_src

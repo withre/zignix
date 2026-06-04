@@ -12,7 +12,7 @@ import urllib.request
 from pathlib import Path
 
 INDEX_URL = "https://ziglang.org/download/index.json"
-PIN_FILE = Path("nix/packages/zig-master/default.nix")
+PIN_FILE = Path("packages/zig-master/default.nix")
 README_FILE = Path("README.org")
 
 SYSTEM_KEYS = {

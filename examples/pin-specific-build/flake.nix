@@ -12,6 +12,6 @@
 
   # Blueprint hands each output file a `pkgs` for the right system,
   # so we never have to write a `forAllSystems` helper ourselves —
-  # see `nix/devshell.nix` and `nix/packages/zig/default.nix`.
+  # see `nix/packages/zig/default.nix` and `nix/packages/hello/default.nix`.
   outputs = inputs: inputs.blueprint { inherit inputs; prefix = "nix"; };
 }

@@ -12,18 +12,18 @@
   #==========================================
   #
   # Blueprint handles the standard outputs (packages, devShells, overlays)
-  # auto-discovered under `nix/`. On top we expose a `lib.<system>` set
+  # auto-discovered at the repository root. On top we expose a `lib.<system>` set
   # with `fromBuild` / `fromUrl` so consumers can pin any Zig nightly
   # without waiting on a curated sources file to update.
   outputs = inputs:
     let
-      bp = inputs.blueprint { inherit inputs; prefix = "nix"; };
+      bp = inputs.blueprint { inherit inputs; };
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       eachSystem = f: builtins.listToAttrs (map (s: { name = s; value = f s; }) systems);
     in
     bp // {
       lib = eachSystem (system:
-        import ./nix/lib/default.nix {
+        import ./lib/default.nix {
           inherit system;
           pkgs = inputs.nixpkgs.legacyPackages.${system};
           lib = inputs.nixpkgs.lib;
