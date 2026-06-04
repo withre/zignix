@@ -144,16 +144,9 @@ there is expected — the Nix commands above use the pinned compiler.
 You do not need to clone this repository. Nix fetches zignix from GitHub
 as part of normal flake evaluation.
 
-After that, pick the pattern matching your flake shape.
-
-#+html:</details>
-
-#+html:<details>
-#+html:<summary><b>Framework flake with pkgs already provided</b></summary>
-#+html:<br>
-
-Use this with blueprint, flake-parts, or similar frameworks. The Quick
-Start snippet shows this pattern.
+After that, pick the pattern for your flake shape. Frameworks like
+blueprint or flake-parts hand each file a ~pkgs~ already, so the Quick
+Start snippet works as-is. A plain flake needs the small helper below.
 
 #+html:</details>
 
@@ -191,13 +184,12 @@ zignix.
 #+html:</details>
 
 #+html:<details>
-#+html:<summary><b>Home Manager</b></summary>
+#+html:<summary><b>Home Manager — what is available</b></summary>
 #+html:<br>
 
 To install Zig globally on your profile, add a zignix package to
-~home.packages~. You can install a repo-maintained build or your own pin.
-
-What zignix exposes (all keyed by ~${pkgs.stdenv.hostPlatform.system}~):
+~home.packages~. You can use a repo-maintained build or your own pin (all
+keyed by ~${pkgs.stdenv.hostPlatform.system}~):
 
 | What you want                   | How to reference it                                  |
 |---------------------------------+------------------------------------------------------|
@@ -209,9 +201,14 @@ What zignix exposes (all keyed by ~${pkgs.stdenv.hostPlatform.system}~):
 | A specific tagged release       | ~zignix.lib.${system}.fromTagged { version; sha256; }~ |
 | The same compiler, renamed      | ~zignix.lib.${system}.withName "<cmd>" <pkg>~          |
 
-*Repo-maintained builds* — no version or hash to write yourself. Use
-~zig-master~ for the latest nightly or ~zig-0.16~ for the latest 0.16
-release.
+#+html:</details>
+
+#+html:<details>
+#+html:<summary><b>Home Manager — repo-maintained builds</b></summary>
+#+html:<br>
+
+No version or hash to write yourself. Use ~zig-master~ for the latest
+nightly or ~zig-0.16~ for the latest 0.16 release.
 
 #+begin_src nix
   # home.nix
@@ -236,8 +233,22 @@ Or via the overlay, which exposes ~pkgs.zignix.master~ and
   }
 #+end_src
 
-*A specific version* — pin it yourself with ~fromBuild~ (nightly) or
-~fromTagged~ (release). See *Pin values* for finding the hash.
+The version you get is whatever the zignix revision in your ~flake.lock~
+pins. Move to a newer build with:
+
+#+begin_src sh
+  nix flake update zignix
+  home-manager switch
+#+end_src
+
+#+html:</details>
+
+#+html:<details>
+#+html:<summary><b>Home Manager — a specific version</b></summary>
+#+html:<br>
+
+Pin it yourself with ~fromBuild~ (nightly) or ~fromTagged~ (release). See
+*Pin values* for finding the hash.
 
 #+begin_src nix
   # home.nix
@@ -255,10 +266,15 @@ Or via the overlay, which exposes ~pkgs.zignix.master~ and
   }
 #+end_src
 
-*Several versions at once* — every zignix package installs a binary
-called ~zig~, so two of them would collide on ~PATH~. Use
-~zignix.lib.${system}.withName~ to expose each under its own command
-name. You decide which one is the bare ~zig~.
+#+html:</details>
+
+#+html:<details>
+#+html:<summary><b>Home Manager — several versions side by side</b></summary>
+#+html:<br>
+
+Every zignix package installs a binary called ~zig~, so two of them would
+collide on ~PATH~. Use ~zignix.lib.${system}.withName~ to expose each
+under its own command name. You decide which one is the bare ~zig~.
 
 #+begin_src nix
   # home.nix
@@ -279,14 +295,6 @@ name. You decide which one is the bare ~zig~.
 
 ~withName~ takes any zignix package, including a ~fromBuild~ /
 ~fromTagged~ pin, so you can name your own versions the same way.
-
-For the repo-maintained packages, the version you get is whatever the
-zignix revision in your ~flake.lock~ pins. Move to a newer build with:
-
-#+begin_src sh
-  nix flake update zignix
-  home-manager switch
-#+end_src
 
 #+html:</details>
 
