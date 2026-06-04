@@ -41,7 +41,8 @@ patterns and *Pin values* for hash lookup commands.
 
 ** 📍 Current pins
 
-The repo ships two prebuilt packages, kept current automatically:
+The repo ships two pinned packages, kept current automatically (built
+from upstream tarballs on demand — there is no binary cache):
 
 | Package      | Tracks              | Version                  |
 |--------------+---------------------+--------------------------|
@@ -157,6 +158,11 @@ Start snippet works as-is. A plain flake needs the small helper below.
 A plain flake needs to instantiate nixpkgs per system before calling
 zignix.
 
+~sha256~ is per system, so a real multi-system flake needs one hash per
+system (see the example at [[file:examples/pin-specific-build/nix/packages/zig/default.nix][examples/pin-specific-build]], which keys an
+attrset by ~system~). The single hash below is the ~x86_64-linux~ one,
+kept short for illustration.
+
 #+begin_src nix
   {
     inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
@@ -172,7 +178,7 @@ zignix.
             pkgs = nixpkgs.legacyPackages.${system};
             zig = zignix.lib.${system}.fromBuild {
               version = "0.17.0";
-              sha256 = "sha256-HL6d+fJ+a3jRTMvKQ7ZwOkBO957xxGPekB1/CI1OICY=";
+              sha256 = "sha256-HL6d+fJ+a3jRTMvKQ7ZwOkBO957xxGPekB1/CI1OICY="; # x86_64-linux; use each system's hash
             };
           in {
             default = pkgs.mkShell { packages = [ zig ]; };
