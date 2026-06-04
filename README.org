@@ -36,8 +36,8 @@ This example uses the latest known upstream ~master~ build for
   }
 #+end_src
 
-Use the hash for the system you build on. See *Usage* for folded examples
-and hash lookup commands.
+Use the hash for the system you build on. See *Installation* for flake
+patterns and *Pin values* for hash lookup commands.
 
 ** 📍 Current pins
 
@@ -52,9 +52,26 @@ These are bumped automatically every 6 hours by the repo's update
 workflow. Consumers pinning their own version with ~fromBuild~ or
 ~fromTagged~ are unaffected.
 
-** 📦 Usage
+** ⚖️ Comparison
 
-*** Try it
+[[https://github.com/mitchellh/zig-overlay][mitchellh/zig-overlay]] is the right choice when you want a curated
+catalogue of Zig builds ready to reference.
+
+zignix is intentionally narrower: it gives you a small function that
+builds the upstream URL from your explicit ~version~ and ~sha256~. That
+means a new nightly can be used as soon as Zig publishes it, without
+waiting for this repository or any overlay index to update.
+
+| Need                                | zig-overlay | zignix           |
+|-------------------------------------+-------------+------------------|
+| Full curated catalogue of releases  | ✅          | ❌               |
+| Ready-to-use latest packages        | ✅          | ✅ (master/0.16) |
+| Pin a just-published upstream build | Depends     | ✅               |
+| Project-owned version/hash          | ❌          | ✅               |
+| Custom mirror URL                   | ❌          | ✅               |
+| Install versions side by side       | ✅          | ✅ (~withName~)    |
+
+** 🧪 Try it
 
 #+html:<details>
 #+html:<summary><b>Run with <code>nix shell</code></b></summary>
@@ -111,7 +128,7 @@ there is expected — the Nix commands above use the pinned compiler.
 
 #+html:</details>
 
-*** Installation
+** 📥 Installation
 
 #+html:<details>
 #+html:<summary><b>Add zignix as a flake input</b></summary>
@@ -273,7 +290,7 @@ zignix revision in your ~flake.lock~ pins. Move to a newer build with:
 
 #+html:</details>
 
-*** Pin values
+** 🔢 Pin values
 
 #+html:<details>
 #+html:<summary><b>Get the latest version and sha256</b></summary>
@@ -325,7 +342,7 @@ you can paste back into the pin.
 
 #+html:</details>
 
-*** Other patterns
+** 🧩 Other patterns
 
 #+html:<details>
 #+html:<summary><b>Tagged releases and custom URLs</b></summary>
@@ -350,25 +367,6 @@ For tagged releases and custom mirrors:
 #+end_src
 
 #+html:</details>
-
-** ⚖️ Comparison
-
-[[https://github.com/mitchellh/zig-overlay][mitchellh/zig-overlay]] is the right choice when you want a curated
-catalogue of Zig builds ready to reference.
-
-zignix is intentionally narrower: it gives you a small function that
-builds the upstream URL from your explicit ~version~ and ~sha256~. That
-means a new nightly can be used as soon as Zig publishes it, without
-waiting for this repository or any overlay index to update.
-
-| Need                                | zig-overlay | zignix           |
-|-------------------------------------+-------------+------------------|
-| Full curated catalogue of releases  | ✅          | ❌               |
-| Ready-to-use latest packages        | ✅          | ✅ (master/0.16) |
-| Pin a just-published upstream build | Depends     | ✅               |
-| Project-owned version/hash          | ❌          | ✅               |
-| Custom mirror URL                   | ❌          | ✅               |
-| Install versions side by side       | ✅          | ✅ (~withName~)    |
 
 ** 📄 License
 
