@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Update the repository's pinned Zig master snapshot."""
+"""Update the repository's pinned Zig snapshots (latest master + latest 0.16)."""
 
 from __future__ import annotations
 
@@ -12,8 +12,12 @@ import urllib.request
 from pathlib import Path
 
 INDEX_URL = "https://ziglang.org/download/index.json"
-PIN_FILE = Path("packages/zig-master/default.nix")
 README_FILE = Path("README.org")
+MASTER_PIN_FILE = Path("packages/zig-master/default.nix")
+
+# Which 0.x release line the `zig-0_16` package tracks, and its pin file.
+MINOR_LINE = "0.16"
+MINOR_PIN_FILE = Path("packages/zig-0_16/default.nix")
 
 SYSTEM_KEYS = {
     "x86_64-linux": "x86_64-linux",
@@ -23,9 +27,9 @@ SYSTEM_KEYS = {
 }
 
 
-def fetch_master() -> dict[str, object]:
+def fetch_index() -> dict[str, object]:
     with urllib.request.urlopen(INDEX_URL, timeout=30) as response:
-        return json.load(response)["master"]
+        return json.load(response)
 
 
 def shasum_to_nix_sha256(shasum: str) -> str:
@@ -37,17 +41,29 @@ def shasum_to_nix_sha256(shasum: str) -> str:
     return "sha256-" + base64.b64encode(digest).decode("ascii")
 
 
-def master_pins(master: dict[str, object]) -> tuple[str, dict[str, str]]:
-    version = str(master["version"])
+def entry_pins(entry: dict[str, object], version: str) -> tuple[str, dict[str, str]]:
     hashes = {
-        system: shasum_to_nix_sha256(str(master[upstream_key]["shasum"]))
+        system: shasum_to_nix_sha256(str(entry[upstream_key]["shasum"]))
         for system, upstream_key in SYSTEM_KEYS.items()
     }
     return version, hashes
 
 
-def build_pin_block(master: dict[str, object]) -> str:
-    version, hashes = master_pins(master)
+def master_entry(index: dict[str, object]) -> tuple[str, dict[str, str]]:
+    master = index["master"]
+    return entry_pins(master, str(master["version"]))
+
+
+def latest_minor_entry(index: dict[str, object], line: str) -> tuple[str, dict[str, str]]:
+    pattern = re.compile(rf"^{re.escape(line)}\.(\d+)$")
+    matches = [(int(m.group(1)), key) for key in index if (m := pattern.match(key))]
+    if not matches:
+        raise RuntimeError(f"no released versions found for line {line}")
+    _, key = max(matches)
+    return entry_pins(index[key], key)
+
+
+def build_pin_block(version: str, hashes: dict[str, str]) -> str:
     today = dt.datetime.now(dt.UTC).date().isoformat()
 
     return f'''  # Pin: {version} ({today})
@@ -64,9 +80,9 @@ def build_pin_block(master: dict[str, object]) -> str:
   }};'''
 
 
-def update_pin_file(pin_file: Path, master: dict[str, object]) -> bool:
+def update_pin_file(pin_file: Path, version: str, hashes: dict[str, str]) -> bool:
     text = pin_file.read_text()
-    replacement = build_pin_block(master)
+    replacement = build_pin_block(version, hashes)
 
     updated, count = re.subn(
         r'  # Pin: .*?\n'
@@ -97,19 +113,37 @@ def update_pin_file(pin_file: Path, master: dict[str, object]) -> bool:
     return False
 
 
-def update_readme(readme_file: Path, master: dict[str, object]) -> bool:
-    version, hashes = master_pins(master)
-    x86_64_linux_hash = hashes["x86_64-linux"]
+def update_readme(
+    readme_file: Path,
+    master_version: str,
+    master_x86_64_linux_hash: str,
+    minor_version: str,
+) -> bool:
     text = readme_file.read_text()
 
     updated, count = re.subn(
         r'(fromBuild \{\n\s*)version = "0\.17\.0-dev\.[^"]+";\n(\s*)sha256 = "sha256-[A-Za-z0-9+/=]+";',
-        rf'\1version = "{version}";\n\2sha256 = "{x86_64_linux_hash}";',
+        rf'\1version = "{master_version}";\n\2sha256 = "{master_x86_64_linux_hash}";',
         text,
     )
-
     if count == 0:
         raise RuntimeError(f"could not find Quick Start pin in {readme_file}")
+
+    updated, master_rows = re.subn(
+        r'(\| ~zig-master~\s+\|[^|]*\| )~0\.17\.0-dev\.[^~]+~',
+        rf'\g<1>~{master_version}~',
+        updated,
+    )
+    if master_rows == 0:
+        raise RuntimeError(f"could not find zig-master row in {readme_file}")
+
+    updated, minor_rows = re.subn(
+        r'(\| ~zig-0_16~\s+\|[^|]*\| )~[0-9]+\.[0-9]+\.[0-9]+~',
+        rf'\g<1>~{minor_version}~',
+        updated,
+    )
+    if minor_rows == 0:
+        raise RuntimeError(f"could not find zig-0_16 row in {readme_file}")
 
     if updated != text:
         readme_file.write_text(updated)
@@ -119,13 +153,23 @@ def update_readme(readme_file: Path, master: dict[str, object]) -> bool:
 
 
 def main() -> int:
-    pin_file = Path(sys.argv[1]) if len(sys.argv) > 1 else PIN_FILE
-    master = fetch_master()
+    index = fetch_index()
+    master_version, master_hashes = master_entry(index)
+    minor_version, minor_hashes = latest_minor_entry(index, MINOR_LINE)
 
-    update_pin_file(pin_file, master)
+    if len(sys.argv) > 1:
+        # Test mode: update a single master pin file in place.
+        update_pin_file(Path(sys.argv[1]), master_version, master_hashes)
+        return 0
 
-    if len(sys.argv) <= 1:
-        update_readme(README_FILE, master)
+    update_pin_file(MASTER_PIN_FILE, master_version, master_hashes)
+    update_pin_file(MINOR_PIN_FILE, minor_version, minor_hashes)
+    update_readme(
+        README_FILE,
+        master_version,
+        master_hashes["x86_64-linux"],
+        minor_version,
+    )
 
     return 0
 

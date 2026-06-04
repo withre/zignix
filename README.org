@@ -4,7 +4,6 @@
 #+html:<div align="center">
 #+html:<p>Pin any upstream Zig build with Nix, without waiting for a curated source list.</p>
 #+html:<p>
-#+html:<img src="https://img.shields.io/badge/Status-experimental-orange?style=flat-square" alt="experimental">
 #+html:<img src="https://img.shields.io/badge/Zig-any%20build-orange?style=flat-square&logo=zig" alt="Zig any build">
 #+html:<img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT License">
 #+html:</p>
@@ -28,17 +27,30 @@ This example uses the latest known upstream ~master~ build for
 ~x86_64-linux~.
 
 #+begin_src nix
-# nix/packages/zig/default.nix
-{ pkgs, inputs, ... }:
-
-inputs.zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
-  version = "0.17.0-dev.667+0569f1f6a";
-  sha256 = "sha256-mG5owYYUWLIc6SKaTQlNjBTh4c9LGmDyjk37cLFxRvc=";
-}
+  # nix/packages/zig/default.nix
+  { pkgs, inputs, ... }:
+  
+  inputs.zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
+    version = "0.17.0-dev.667+0569f1f6a";
+    sha256 = "sha256-mG5owYYUWLIc6SKaTQlNjBTh4c9LGmDyjk37cLFxRvc=";
+  }
 #+end_src
 
 Use the hash for the system you build on. See *Usage* for folded examples
 and hash lookup commands.
+
+** 📍 Current pins
+
+The repo ships two prebuilt packages, kept current automatically:
+
+| Package      | Tracks              | Version                  |
+|--------------+---------------------+--------------------------|
+| ~zig-master~ | latest ~master~       | ~0.17.0-dev.667+0569f1f6a~ |
+| ~zig-0_16~     | latest 0.16 release | ~0.16.0~                   |
+
+These are bumped automatically every 6 hours by the repo's update
+workflow. Consumers pinning their own version with ~fromBuild~ or
+~fromTagged~ are unaffected.
 
 ** 📦 Usage
 
@@ -51,13 +63,13 @@ and hash lookup commands.
 Run the bundled latest Zig package directly from GitHub:
 
 #+begin_src sh
-nix shell github:rytswd/zignix#zig-master -c zig version
+  nix shell github:rytswd/zignix#zig-master -c zig version
 #+end_src
 
 From a local checkout, use the local flake instead:
 
 #+begin_src sh
-nix shell .#zig-master -c zig version
+  nix shell .#zig-master -c zig version
 #+end_src
 
 The printed version should match the pin in the Quick Start example.
@@ -75,21 +87,22 @@ the version pinned in the example.
 Build and run it through Nix:
 
 #+begin_src sh
-nix build ./examples/pin-specific-build#hello --no-link
-nix run ./examples/pin-specific-build#hello
+  nix build ./examples/pin-specific-build#hello --no-link
+  nix run ./examples/pin-specific-build#hello
 #+end_src
 
 Check the pinned Zig CLI directly:
 
 #+begin_src sh
-nix shell ./examples/pin-specific-build#zig -c zig version
+  nix shell ./examples/pin-specific-build#zig
+  zig version
 #+end_src
 
 Or run the example's ~build.zig~ with that pinned compiler:
 
 #+begin_src sh
-cd examples/pin-specific-build
-nix shell .#zig -c zig build run
+  cd examples/pin-specific-build
+  nix shell .#zig -c zig build run
 #+end_src
 
 The output shows the compiler version in use next to the example pin. A
@@ -105,10 +118,10 @@ there is expected — the Nix commands above use the pinned compiler.
 #+html:<br>
 
 #+begin_src nix
-{
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
-  inputs.zignix.url = "github:rytswd/zignix";
-}
+  {
+    inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
+    inputs.zignix.url = "github:rytswd/zignix";
+  }
 #+end_src
 
 You do not need to clone this repository. Nix fetches zignix from GitHub
@@ -135,27 +148,127 @@ A plain flake needs to instantiate nixpkgs per system before calling
 zignix.
 
 #+begin_src nix
-{
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
-  inputs.zignix.url = "github:rytswd/zignix";
+  {
+    inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
+    inputs.zignix.url = "github:rytswd/zignix";
 
-  outputs = { nixpkgs, zignix, ... }:
-    let
-      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-      forAllSystems = nixpkgs.lib.genAttrs systems;
-    in {
-      devShells = forAllSystems (system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-          zig = zignix.lib.${system}.fromBuild {
-            version = "0.17.0-dev.667+0569f1f6a";
-            sha256 = "sha256-mG5owYYUWLIc6SKaTQlNjBTh4c9LGmDyjk37cLFxRvc=";
-          };
-        in {
-          default = pkgs.mkShell { packages = [ zig ]; };
-        });
-    };
-}
+    outputs = { nixpkgs, zignix, ... }:
+      let
+        systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+        forAllSystems = nixpkgs.lib.genAttrs systems;
+      in {
+        devShells = forAllSystems (system:
+          let
+            pkgs = nixpkgs.legacyPackages.${system};
+            zig = zignix.lib.${system}.fromBuild {
+              version = "0.17.0-dev.667+0569f1f6a";
+              sha256 = "sha256-mG5owYYUWLIc6SKaTQlNjBTh4c9LGmDyjk37cLFxRvc=";
+            };
+          in {
+            default = pkgs.mkShell { packages = [ zig ]; };
+          });
+      };
+  }
+#+end_src
+
+#+html:</details>
+
+#+html:<details>
+#+html:<summary><b>Home Manager</b></summary>
+#+html:<br>
+
+To install Zig globally on your profile, add a zignix package to
+~home.packages~. You can install a repo-maintained build or your own pin.
+
+What zignix exposes (all keyed by ~${pkgs.stdenv.hostPlatform.system}~):
+
+| What you want                   | How to reference it                                  |
+|---------------------------------+------------------------------------------------------|
+| Latest master (repo-maintained) | ~zignix.packages.${system}.zig-master~                 |
+| Latest 0.16 (repo-maintained)   | ~zignix.packages.${system}.zig-0_16~                   |
+| Latest master via overlay       | ~pkgs.zignix.master~ (after adding the overlay)        |
+| Latest 0.16 via overlay         | ~pkgs.zignix."0.16"~ (after adding the overlay)        |
+| A specific master build         | ~zignix.lib.${system}.fromBuild { version; sha256; }~  |
+| A specific tagged release       | ~zignix.lib.${system}.fromTagged { version; sha256; }~ |
+| The same compiler, renamed      | ~zignix.lib.${system}.withName "<cmd>" <pkg>~          |
+
+*Repo-maintained builds* — no version or hash to write yourself. Use
+~zig-master~ for the latest nightly or ~zig-0.16~ for the latest 0.16
+release.
+
+#+begin_src nix
+  # home.nix
+  { pkgs, zignix, ... }:
+  {
+    home.packages = [
+      zignix.packages.${pkgs.stdenv.hostPlatform.system}.zig-master
+      # or: zignix.packages.${pkgs.stdenv.hostPlatform.system}.zig-0_16
+    ];
+  }
+#+end_src
+
+Or via the overlay, which exposes ~pkgs.zignix.master~ and
+~pkgs.zignix."0.16"~:
+
+#+begin_src nix
+  # home.nix
+  { pkgs, ... }:
+  {
+    nixpkgs.overlays = [ zignix.overlays.default ];
+    home.packages = [ pkgs.zignix.master ];
+  }
+#+end_src
+
+*A specific version* — pin it yourself with ~fromBuild~ (nightly) or
+~fromTagged~ (release). See *Pin values* for finding the hash.
+
+#+begin_src nix
+  # home.nix
+  { pkgs, zignix, ... }:
+  let
+    zig = zignix.lib.${pkgs.stdenv.hostPlatform.system};
+  in
+  {
+    home.packages = [
+      (zig.fromTagged {
+        version = "0.16.0";
+        sha256 = "sha256-cOSWZKdDdLSLUebz/fv0N/Y5XUJQkFBYi9SavlK6PQA=";
+      })
+    ];
+  }
+#+end_src
+
+*Several versions at once* — every zignix package installs a binary
+called ~zig~, so two of them would collide on ~PATH~. Use
+~zignix.lib.${system}.withName~ to expose each under its own command
+name. You decide which one is the bare ~zig~.
+
+#+begin_src nix
+  # home.nix
+  { pkgs, zignix, ... }:
+  let
+    zig = zignix.lib.${pkgs.stdenv.hostPlatform.system};
+    pkgsFor = zignix.packages.${pkgs.stdenv.hostPlatform.system};
+  in
+  {
+    home.packages = [
+      # zig is master here; swap to pkgsFor.zig-0_16 if you prefer stable
+      (zig.withName "zig"        pkgsFor.zig-master)
+      (zig.withName "zig-master" pkgsFor.zig-master)
+      (zig.withName "zig-0.16"   pkgsFor.zig-0_16)
+    ];
+  }
+#+end_src
+
+~withName~ takes any zignix package, including a ~fromBuild~ /
+~fromTagged~ pin, so you can name your own versions the same way.
+
+For the repo-maintained packages, the version you get is whatever the
+zignix revision in your ~flake.lock~ pins. Move to a newer build with:
+
+#+begin_src sh
+  nix flake update zignix
+  home-manager switch
 #+end_src
 
 #+html:</details>
@@ -172,24 +285,24 @@ so convert the one for your system to Nix SRI format before using it as
 ~sha256~.
 
 #+begin_src sh
-# version
-curl -s https://ziglang.org/download/index.json \
-  | jq -r '.master.version'
-
-# sha256 for x86_64-linux
-curl -s https://ziglang.org/download/index.json \
-  | jq -r '.master."x86_64-linux".shasum' \
-  | xargs nix hash convert --hash-algo sha256 --to sri
+  # version
+  curl -s https://ziglang.org/download/index.json \
+    | jq -r '.master.version'
+  
+  # sha256 for x86_64-linux
+  curl -s https://ziglang.org/download/index.json \
+    | jq -r '.master."x86_64-linux".shasum' \
+    | xargs nix hash convert --hash-algo sha256 --to sri
 #+end_src
 
 System key mapping:
 
-| zignix system    | Zig index key    |
-|------------------+------------------|
-| ~x86_64-linux~   | ~x86_64-linux~   |
-| ~aarch64-linux~  | ~aarch64-linux~  |
-| ~x86_64-darwin~  | ~x86_64-macos~   |
-| ~aarch64-darwin~ | ~aarch64-macos~  |
+| zignix system   | Zig index key |
+|-----------------+---------------|
+| ~x86_64-linux~    | ~x86_64-linux~  |
+| ~aarch64-linux~   | ~aarch64-linux~ |
+| ~x86_64-darwin~ | ~x86_64-macos~  |
+| ~aarch64-darwin~  | ~aarch64-macos~ |
 
 #+html:</details>
 
@@ -201,10 +314,10 @@ If you do not want to convert the upstream shasum yourself, use a fake
 hash first:
 
 #+begin_src nix
-zignix.lib.${system}.fromBuild {
-  version = "0.17.0-dev.667+0569f1f6a";
-  sha256 = zignix.lib.${system}.fakeHash;
-}
+  zignix.lib.${system}.fromBuild {
+    version = "0.17.0-dev.667+0569f1f6a";
+    sha256 = zignix.lib.${system}.fakeHash;
+  }
 #+end_src
 
 Then run ~nix build~. Nix fails with the expected ~sha256~ value, which
@@ -222,18 +335,18 @@ you can paste back into the pin.
 For tagged releases and custom mirrors:
 
 #+begin_src nix
-zignix.lib.${system}.fromTagged {
-  version = "0.16.0";
-  sha256 = "sha256-cOSWZKdDdLSLUebz/fv0N/Y5XUJQkFBYi9SavlK6PQA=";
-}
+  zignix.lib.${system}.fromTagged {
+    version = "0.16.0";
+    sha256 = "sha256-cOSWZKdDdLSLUebz/fv0N/Y5XUJQkFBYi9SavlK6PQA=";
+  }
 #+end_src
 
 #+begin_src nix
-zignix.lib.${system}.fromUrl {
-  version = "0.17.0-dev.612+abc";
-  url = "https://my-mirror/zig-x86_64-linux-0.17.0-dev.612+abc.tar.xz";
-  sha256 = "...";
-}
+  zignix.lib.${system}.fromUrl {
+    version = "0.17.0-dev.612+abc";
+    url = "https://my-mirror/zig-x86_64-linux-0.17.0-dev.612+abc.tar.xz";
+    sha256 = "...";
+  }
 #+end_src
 
 #+html:</details>
@@ -248,13 +361,15 @@ builds the upstream URL from your explicit ~version~ and ~sha256~. That
 means a new nightly can be used as soon as Zig publishes it, without
 waiting for this repository or any overlay index to update.
 
-| Need                                | zig-overlay | zignix |
-|-------------------------------------+-------------+--------|
-| Curated catalogue                   | ✅          | ❌     |
-| Pin a just-published upstream build | Depends     | ✅     |
-| Project-owned version/hash          | ✅          | ✅     |
-| Custom mirror URL                   | ❌          | ✅     |
+| Need                                | zig-overlay | zignix           |
+|-------------------------------------+-------------+------------------|
+| Full curated catalogue of releases  | ✅          | ❌               |
+| Ready-to-use latest packages        | ✅          | ✅ (master/0.16) |
+| Pin a just-published upstream build | Depends     | ✅               |
+| Project-owned version/hash          | ❌          | ✅               |
+| Custom mirror URL                   | ❌          | ✅               |
+| Install versions side by side       | ✅          | ✅ (~withName~)    |
 
 ** 📄 License
 
-MIT. See [[file:LICENSE][LICENSE]].
+[[file:LICENSE][MIT]].

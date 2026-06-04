@@ -154,6 +154,33 @@ in
     };
 
   ###----------------------------------------
+  ##   withName — expose a zig under a custom command name
+  #------------------------------------------
+  #
+  # Every zignix package installs a binary called `zig`, so two of them
+  # on the same profile would collide on PATH. `withName` returns a
+  # package that exposes the same compiler under a different command
+  # name, letting several Zig versions coexist.
+  #
+  # Zig locates its bundled `lib/` relative to the resolved executable
+  # path, so a symlink to the real binary keeps `zig build` working.
+  #
+  # Example (Home Manager):
+  #   home.packages = [
+  #     (zignix.lib.${system}.withName "zig"      pkgs.zignix.master)
+  #     (zignix.lib.${system}.withName "zig-0.16" pkgs.zignix."0.16")
+  #   ];
+  withName = name: zig:
+    pkgs.runCommandLocal "${name}-${zig.version or "zig"}"
+      {
+        meta = (zig.meta or { }) // { mainProgram = name; };
+      }
+      ''
+        mkdir -p $out/bin
+        ln -s ${lib.getExe zig} $out/bin/${name}
+      '';
+
+  ###----------------------------------------
   ##   Re-exports for downstream consumers
   #------------------------------------------
   inherit systemMap;
