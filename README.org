@@ -31,8 +31,8 @@ This example uses the latest known upstream ~master~ build for
   { pkgs, inputs, ... }:
   
   inputs.zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
-    version = "0.17.0-dev.864+3deb86baf";
-    sha256 = "sha256-UndSpOYV3WeiznMyRq7DC9MwO4uVlTJUCWP5AMJ/lLc=";
+    version = "0.17.0-dev.877+a3ae499dc";
+    sha256 = "sha256-XIQ8CxH6qV8BKM+J0l2PKo97pT/+frvX7WzKZSNq6tw=";
   }
 #+end_src
 
@@ -45,7 +45,7 @@ The repo ships two prebuilt packages, kept current automatically:
 
 | Package      | Tracks              | Version                  |
 |--------------+---------------------+--------------------------|
-| ~zig-master~ | latest ~master~       | ~0.17.0-dev.864+3deb86baf~ |
+| ~zig-master~ | latest ~master~       | ~0.17.0-dev.877+a3ae499dc~ |
 | ~zig-0_16~     | latest 0.16 release | ~0.16.0~                   |
 
 These are bumped automatically every 6 hours by the repo's update
@@ -171,8 +171,8 @@ zignix.
           let
             pkgs = nixpkgs.legacyPackages.${system};
             zig = zignix.lib.${system}.fromBuild {
-              version = "0.17.0-dev.864+3deb86baf";
-              sha256 = "sha256-UndSpOYV3WeiznMyRq7DC9MwO4uVlTJUCWP5AMJ/lLc=";
+              version = "0.17.0-dev.877+a3ae499dc";
+              sha256 = "sha256-XIQ8CxH6qV8BKM+J0l2PKo97pT/+frvX7WzKZSNq6tw=";
             };
           in {
             default = pkgs.mkShell { packages = [ zig ]; };
@@ -341,7 +341,7 @@ hash first:
 
 #+begin_src nix
   zignix.lib.${system}.fromBuild {
-    version = "0.17.0-dev.864+3deb86baf";
+    version = "0.17.0-dev.877+a3ae499dc";
     sha256 = zignix.lib.${system}.fakeHash;
   }
 #+end_src
