@@ -41,17 +41,15 @@ patterns and *Pin values* for hash lookup commands.
 
 ** 📍 Current pins
 
-The repo ships two pinned packages, kept current automatically (built
-from upstream tarballs on demand — there is no binary cache):
+The repo ships these pinned packages, kept current automatically (built from upstream tarballs on demand — there is no binary cache):
 
 | Package      | Tracks              | Version                  |
 |--------------+---------------------+--------------------------|
 | ~zig-master~ | latest ~master~       | ~0.17.0~ |
+| ~zig-0_17~     | latest 0.17 release | ~0.17.0~                   |
 | ~zig-0_16~     | latest 0.16 release | ~0.16.0~                   |
 
-These are bumped automatically every 6 hours by the repo's update
-workflow. Consumers pinning their own version with ~fromBuild~ or
-~fromTagged~ are unaffected.
+These are bumped automatically every 6 hours by the repo's update workflow; each ~zig-<major>_<minor>~ package follows the newest patch release of its line. Consumers pinning their own version with ~fromBuild~ or ~fromTagged~ are unaffected.
 
 ** ⚖️ Comparison
 
@@ -63,14 +61,14 @@ builds the upstream URL from your explicit ~version~ and ~sha256~. That
 means a new nightly can be used as soon as Zig publishes it, without
 waiting for this repository or any overlay index to update.
 
-| Need                                | zig-overlay | zignix           |
-|-------------------------------------+-------------+------------------|
-| Full curated catalogue of releases  | ✅          | ❌               |
-| Ready-to-use latest packages        | ✅          | ✅ (master/0.16) |
-| Pin a just-published upstream build | Depends     | ✅               |
-| Project-owned version/hash          | ❌          | ✅               |
-| Custom mirror URL                   | ❌          | ✅               |
-| Install versions side by side       | ✅          | ✅ (~withName~)    |
+| Need                                | zig-overlay | zignix                      |
+|-------------------------------------+-------------+-----------------------------|
+| Full curated catalogue of releases  | ✅          | ❌                          |
+| Ready-to-use latest packages        | ✅          | ✅ (master + release lines) |
+| Pin a just-published upstream build | Depends     | ✅                          |
+| Project-owned version/hash          | ❌          | ✅                          |
+| Custom mirror URL                   | ❌          | ✅                          |
+| Install versions side by side       | ✅          | ✅ (~withName~)               |
 
 ** 🧪 Try it
 
@@ -200,12 +198,14 @@ keyed by ~${pkgs.stdenv.hostPlatform.system}~):
 | What you want                   | How to reference it                                  |
 |---------------------------------+------------------------------------------------------|
 | Latest master (repo-maintained) | ~zignix.packages.${system}.zig-master~                 |
-| Latest 0.16 (repo-maintained)   | ~zignix.packages.${system}.zig-0_16~                   |
+| Latest 0.17 (repo-maintained)   | ~zignix.packages.${system}.zig-0_17~                   |
 | Latest master via overlay       | ~pkgs.zignix.master~ (after adding the overlay)        |
-| Latest 0.16 via overlay         | ~pkgs.zignix."0.16"~ (after adding the overlay)        |
+| Latest 0.17 via overlay         | ~pkgs.zignix."0.17"~ (after adding the overlay)        |
 | A specific master build         | ~zignix.lib.${system}.fromBuild { version; sha256; }~  |
 | A specific tagged release       | ~zignix.lib.${system}.fromTagged { version; sha256; }~ |
 | The same compiler, renamed      | ~zignix.lib.${system}.withName "<cmd>" <pkg>~          |
+
+Every other line in *Current pins* works the same way, e.g. ~zig-0_16~ or ~pkgs.zignix."0.16"~.
 
 #+html:</details>
 
@@ -213,8 +213,7 @@ keyed by ~${pkgs.stdenv.hostPlatform.system}~):
 #+html:<summary><b>Home Manager — repo-maintained builds</b></summary>
 #+html:<br>
 
-No version or hash to write yourself. Use the ~zig-master~ package for
-the latest nightly or ~zig-0_16~ for the latest 0.16 release.
+No version or hash to write yourself. Use the ~zig-master~ package for the latest nightly or ~zig-0_17~ for the latest 0.17 release (~zig-0_16~ is still kept current too).
 
 #+begin_src nix
   # home.nix
@@ -222,14 +221,12 @@ the latest nightly or ~zig-0_16~ for the latest 0.16 release.
   {
     home.packages = [
       zignix.packages.${pkgs.stdenv.hostPlatform.system}.zig-master
-      # or: zignix.packages.${pkgs.stdenv.hostPlatform.system}.zig-0_16
+      # or: zignix.packages.${pkgs.stdenv.hostPlatform.system}.zig-0_17
     ];
   }
 #+end_src
 
-Or via the overlay, which exposes ~pkgs.zignix.master~ and
-~pkgs.zignix."0.16"~ (pass ~zignix~ to the module so the overlay is in
-scope):
+Or via the overlay, which exposes ~pkgs.zignix.master~ and one ~pkgs.zignix."<major>.<minor>"~ per release line, such as ~pkgs.zignix."0.17"~ (pass ~zignix~ to the module so the overlay is in scope):
 
 #+begin_src nix
   # home.nix
@@ -294,10 +291,10 @@ the bare ~zig~.
   in
   {
     home.packages = [
-      # zig is master here; swap to pkgsFor.zig-0_16 if you prefer stable
+      # zig is master here; swap to pkgsFor.zig-0_17 if you prefer stable
       (zig.withName "zig"        pkgsFor.zig-master)
       (zig.withName "zig-master" pkgsFor.zig-master)
-      (zig.withName "zig-0.16"   pkgsFor.zig-0_16)
+      (zig.withName "zig-0.17"   pkgsFor.zig-0_17)
     ];
   }
 #+end_src
