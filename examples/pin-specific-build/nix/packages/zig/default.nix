@@ -38,15 +38,15 @@
 # not yet been mirrored into a curated overlay.
 
 inputs.zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
-  # Pinned: 0.17.0-dev.607+456b2ec07 (upstream master as of 2026-05-29).
-  version = "0.17.0-dev.607+456b2ec07";
+  # Pinned: 0.18.0-dev.252+86dc5ce25 (upstream master as of 2026-10-13).
+  version = "0.18.0-dev.252+86dc5ce25";
 
   # Converted from .master["x86_64-linux"].shasum etc. in index.json.
   sha256 =
     {
-      x86_64-linux   = "sha256-GSdRB957iewz0ptQ8AmXwTgcUk0eM7coRy3L1VHaLjM=";
-      aarch64-linux  = "sha256-lqFGW5MuI+682VmMgtMZ0xa0FSm24O8bz/SOr148sVo=";
-      x86_64-darwin  = "sha256-MxX/AMHZDSRywb73tYPjoa20uRYLNFKq2Ciwd6191fo=";
-      aarch64-darwin = "sha256-TzFD+lqXI3VLlRa+b5vCP9onQ6vxFEVwrmesh19dKgk=";
+      x86_64-linux   = "sha256-RZeGcjlAopwZZY19NFct/oe9Grkz2ShtO1H7Vlbj6xc=";
+      aarch64-linux  = "sha256-OtEhUQ3h64qfFyAHTicYJKBxpu6O90XuUxcUnDGjop8=";
+      x86_64-darwin  = "sha256-yY9aaNMov0us9tEQ2k5yUPivYrdF63CjxPD7fy7+HCE=";
+      aarch64-darwin = "sha256-JoVVqQ/HLigYgrLrpGn8iPAAWu4mmBRRqdYbxLyj8wI=";
     }.${pkgs.stdenv.hostPlatform.system};
 }
