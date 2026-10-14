@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Update the repository's pinned Zig snapshots (latest master + latest 0.16)."""
+"""Update the repository's pinned Zig snapshots.
+
+Pins the latest master build, plus the latest release of every tracked
+release line (each packages/zig-<major>_<minor>/ package).
+"""
 
 from __future__ import annotations
 
@@ -15,9 +19,11 @@ INDEX_URL = "https://ziglang.org/download/index.json"
 README_FILE = Path("README.org")
 MASTER_PIN_FILE = Path("packages/zig-master/default.nix")
 
-# Which 0.x release line the `zig-0_16` package tracks, and its pin file.
-MINOR_LINE = "0.16"
-MINOR_PIN_FILE = Path("packages/zig-0_16/default.nix")
+# Release lines are discovered rather than listed: every
+# packages/zig-<major>_<minor>/ package tracks the newest <major>.<minor>.x
+# release, so adding a line needs no change to this script.
+PACKAGES_DIR = Path("packages")
+RELEASE_LINE_PACKAGE = re.compile(r"zig-([0-9]+)_([0-9]+)")
 
 SYSTEM_KEYS = {
     "x86_64-linux": "x86_64-linux",
@@ -52,6 +58,19 @@ def entry_pins(entry: dict[str, object], version: str) -> tuple[str, dict[str, s
 def master_entry(index: dict[str, object]) -> tuple[str, dict[str, str]]:
     master = index["master"]
     return entry_pins(master, str(master["version"]))
+
+
+def release_line_pin_files() -> dict[str, Path]:
+    """Map each tracked release line (e.g. "0.16") to its pin file."""
+    lines = {}
+    for package in sorted(PACKAGES_DIR.iterdir()):
+        match = RELEASE_LINE_PACKAGE.fullmatch(package.name)
+        if match:
+            lines[".".join(match.groups())] = package / "default.nix"
+
+    if not lines:
+        raise RuntimeError(f"no zig-<major>_<minor> packages in {PACKAGES_DIR}")
+    return lines
 
 
 def latest_minor_entry(index: dict[str, object], line: str) -> tuple[str, dict[str, str]]:
@@ -117,7 +136,7 @@ def update_readme(
     readme_file: Path,
     master_version: str,
     master_x86_64_linux_hash: str,
-    minor_version: str,
+    release_versions: dict[str, str],
 ) -> bool:
     text = readme_file.read_text()
 
@@ -157,13 +176,17 @@ def update_readme(
     if master_rows == 0:
         raise RuntimeError(f"could not find zig-master row in {readme_file}")
 
-    updated, minor_rows = re.subn(
-        r'(\| ~zig-0_16~\s+\|[^|]*\| )~[0-9]+\.[0-9]+\.[0-9]+~',
-        rf'\g<1>~{minor_version}~',
-        updated,
-    )
-    if minor_rows == 0:
-        raise RuntimeError(f"could not find zig-0_16 row in {readme_file}")
+    # Every tracked line needs its own row, so a new package cannot ship
+    # without showing up in the Current pins table.
+    for line, version in release_versions.items():
+        package = "zig-" + line.replace(".", "_")
+        updated, rows = re.subn(
+            rf'(\| ~{re.escape(package)}~\s+\|[^|]*\| )~[0-9]+\.[0-9]+\.[0-9]+~',
+            rf'\g<1>~{version}~',
+            updated,
+        )
+        if rows == 0:
+            raise RuntimeError(f"could not find {package} row in {readme_file}")
 
     if updated != text:
         readme_file.write_text(updated)
@@ -175,7 +198,6 @@ def update_readme(
 def main() -> int:
     index = fetch_index()
     master_version, master_hashes = master_entry(index)
-    minor_version, minor_hashes = latest_minor_entry(index, MINOR_LINE)
 
     if len(sys.argv) > 1:
         # Test mode: update a single master pin file in place.
@@ -183,12 +205,18 @@ def main() -> int:
         return 0
 
     update_pin_file(MASTER_PIN_FILE, master_version, master_hashes)
-    update_pin_file(MINOR_PIN_FILE, minor_version, minor_hashes)
+
+    release_versions = {}
+    for line, pin_file in release_line_pin_files().items():
+        version, hashes = latest_minor_entry(index, line)
+        update_pin_file(pin_file, version, hashes)
+        release_versions[line] = version
+
     update_readme(
         README_FILE,
         master_version,
         master_hashes["x86_64-linux"],
-        minor_version,
+        release_versions,
     )
 
     return 0

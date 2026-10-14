@@ -13,20 +13,31 @@
 #   pkgs.zignix.fromBuild { version = "..."; sha256 = "..."; }
 #   pkgs.zignix.master      # latest master, repo-maintained
 #   pkgs.zignix."0.16"      # latest 0.16 release, repo-maintained
+#                           # (one attribute per release line)
 final: prev:
 let
+  inherit (prev) lib;
+
   zignixLib = import ../lib/default.nix {
     system = prev.stdenv.hostPlatform.system;
     pkgs = prev;
-    inherit (prev) lib;
+    inherit lib;
   };
 
   pkgsFor = flake.packages.${prev.stdenv.hostPlatform.system} or { };
-  master = pkgsFor.zig-master or null;
-  v0_16 = pkgsFor.zig-0_16 or null;
+
+  # Every zig-<major>_<minor> package becomes pkgs.zignix."<major>.<minor>",
+  # so adding a release line needs no change here.
+  releaseLines = lib.concatMapAttrs (
+    name: pkg:
+    let
+      line = builtins.match "zig-([0-9]+)_([0-9]+)" name;
+    in
+    lib.optionalAttrs (line != null) { ${lib.concatStringsSep "." line} = pkg; }
+  ) pkgsFor;
 in
 {
   zignix = zignixLib
-    // (if master != null then { inherit master; } else { })
-    // (if v0_16 != null then { "0.16" = v0_16; } else { });
+    // lib.optionalAttrs (pkgsFor ? zig-master) { master = pkgsFor.zig-master; }
+    // releaseLines;
 }

@@ -28,13 +28,12 @@ jobs:
       - name: Update pins
         run: python3 scripts/update-zig-master-pins.py
 
+      # Paths are directories rather than a file list, so a new release
+      # line (packages/zig-<major>_<minor>/) needs no change here.
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet -- \
-            packages/zig-master/default.nix \
-            packages/zig-0_16/default.nix \
-            README.org; then
+          if git diff --quiet -- packages README.org; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -45,7 +44,9 @@ jobs:
         # Only x86_64-linux is built here. The other systems' hashes are
         # deterministic conversions of upstream shasums (see the update
         # script), so they are not fetched/built on this runner.
-        run: nix build .#zig-master .#zig-0_16
+        # Blueprint adds a pkgs-<name> check per package, so this covers
+        # every pin without listing them.
+        run: nix flake check -L
 
       - name: Commit and push
         if: steps.changes.outputs.changed == 'true'
@@ -54,9 +55,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            packages/zig-master/default.nix \
-            packages/zig-0_16/default.nix \
-            README.org
+          # -u: stage only the tracked files the update script edits.
+          git add -u -- packages README.org
           git commit -m "Update Zig pins (master ${master})"
           git push

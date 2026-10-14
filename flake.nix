@@ -36,8 +36,9 @@
         });
 
       # `overlays/default.nix` is a `{ flake, ... }: final: prev: …` overlay; it
-      # reads `flake.packages.<system>` to expose `pkgs.zignix.master` /
-      # `pkgs.zignix."0.16"` alongside the lib helpers.
+      # reads `flake.packages.<system>` to expose `pkgs.zignix.master` and one
+      # `pkgs.zignix."<major>.<minor>"` per release line alongside the lib
+      # helpers.
       overlays.default = import ./overlays/default.nix { flake = bp; };
     };
 }
