@@ -36,6 +36,11 @@
 # `nix build` once — Nix will fail with the real hash, which you
 # paste back here. Same trick works for any upstream build that has
 # not yet been mirrored into a curated overlay.
+#
+# Upstream prunes /builds after a few weeks, so an old nightly pin
+# stops fetching on machines that don't have it cached. In this repo
+# the update workflow re-pins the example with the master pin; in your
+# own project, bumping the pin is up to you.
 
 inputs.zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
   # Pinned: 0.18.0-dev.252+86dc5ce25 (upstream master as of 2026-10-13).

@@ -2,7 +2,8 @@
 """Update the repository's pinned Zig snapshots.
 
 Pins the latest master build, plus the latest release of every tracked
-release line (each packages/zig-<major>_<minor>/ package).
+release line (each packages/zig-<major>_<minor>/ package), and re-pins the
+example project to that same master build.
 """
 
 from __future__ import annotations
@@ -24,6 +25,11 @@ MASTER_PIN_FILE = Path("packages/zig-master/default.nix")
 # release, so adding a line needs no change to this script.
 PACKAGES_DIR = Path("packages")
 RELEASE_LINE_PACKAGE = re.compile(r"zig-([0-9]+)_([0-9]+)")
+
+# The example pins its own master build, and upstream prunes /builds after
+# a few weeks, so it follows the master pin rather than going stale.
+EXAMPLE_PIN_FILE = Path("examples/pin-specific-build/nix/packages/zig/default.nix")
+EXAMPLE_MAIN_FILE = Path("examples/pin-specific-build/src/main.zig")
 
 SYSTEM_KEYS = {
     "x86_64-linux": "x86_64-linux",
@@ -195,6 +201,58 @@ def update_readme(
     return False
 
 
+def update_example(version: str, date: str, hashes: dict[str, str]) -> bool:
+    """Re-pin the example project, keeping main.zig's pin string in step.
+
+    `date` is upstream's build date rather than today, so the files only
+    change when the version does.
+    """
+    text = EXAMPLE_PIN_FILE.read_text()
+
+    updated, version_count = re.subn(
+        r'  # Pinned: [^\n]*\n  version = "[^"]+";\n',
+        lambda _: (
+            f'  # Pinned: {version} (upstream master as of {date}).\n'
+            f'  version = "{version}";\n'
+        ),
+        text,
+        count=1,
+    )
+    updated, hash_count = re.subn(
+        r'      x86_64-linux   = "sha256-[A-Za-z0-9+/=]+";\n'
+        r'      aarch64-linux  = "sha256-[A-Za-z0-9+/=]+";\n'
+        r'      x86_64-darwin  = "sha256-[A-Za-z0-9+/=]+";\n'
+        r'      aarch64-darwin = "sha256-[A-Za-z0-9+/=]+";\n',
+        lambda _: "".join(
+            f'      {system:<14} = "{hashes[system]}";\n' for system in SYSTEM_KEYS
+        ),
+        updated,
+        count=1,
+    )
+    if version_count != 1 or hash_count != 1:
+        raise RuntimeError(f"could not find the pin in {EXAMPLE_PIN_FILE}")
+
+    main_text = EXAMPLE_MAIN_FILE.read_text()
+    main_updated, main_count = re.subn(
+        r'(const pinned_zig_version = )"[^"]+";',
+        lambda m: f'{m.group(1)}"{version}";',
+        main_text,
+        count=1,
+    )
+    if main_count != 1:
+        raise RuntimeError(f"could not find pinned_zig_version in {EXAMPLE_MAIN_FILE}")
+
+    changed = False
+    for path, before, after in (
+        (EXAMPLE_PIN_FILE, text, updated),
+        (EXAMPLE_MAIN_FILE, main_text, main_updated),
+    ):
+        if after != before:
+            path.write_text(after)
+            changed = True
+    return changed
+
+
 def main() -> int:
     index = fetch_index()
     master_version, master_hashes = master_entry(index)
@@ -218,6 +276,7 @@ def main() -> int:
         master_hashes["x86_64-linux"],
         release_versions,
     )
+    update_example(master_version, str(index["master"]["date"]), master_hashes)
 
     return 0
 

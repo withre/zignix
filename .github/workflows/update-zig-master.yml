@@ -33,7 +33,7 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet -- packages README.org; then
+          if git diff --quiet -- packages README.org examples/pin-specific-build; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -45,8 +45,12 @@ jobs:
         # deterministic conversions of upstream shasums (see the update
         # script), so they are not fetched/built on this runner.
         # Blueprint adds a pkgs-<name> check per package, so this covers
-        # every pin without listing them.
-        run: nix flake check -L
+        # every pin without listing them. The example is built too: it
+        # shares the master pin, but its Zig source has to compile with the
+        # new build, and a broken example should block the bump.
+        run: |
+          nix flake check -L
+          nix build ./examples/pin-specific-build#hello --no-link -L
 
       - name: Commit and push
         if: steps.changes.outputs.changed == 'true'
@@ -56,6 +60,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # -u: stage only the tracked files the update script edits.
-          git add -u -- packages README.org
+          git add -u -- packages README.org examples/pin-specific-build
           git commit -m "Update Zig pins (master ${master})"
           git push
