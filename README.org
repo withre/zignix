@@ -46,7 +46,7 @@ The repo ships these pinned packages, kept current automatically (built from ups
 | Package      | Tracks              | Version                  |
 |--------------+---------------------+--------------------------|
 | ~zig-master~ | latest ~master~       | ~0.18.0-dev.852+efa5bfa9b~ |
-| ~zig-0_17~     | latest 0.17 release | ~0.17.0~                   |
+| ~zig-0_17~     | latest 0.17 release | ~0.17.1~                   |
 | ~zig-0_16~     | latest 0.16 release | ~0.16.0~                   |
 
 These are bumped automatically every 6 hours by the repo's update workflow; each ~zig-<major>_<minor>~ package follows the newest patch release of its line. Consumers pinning their own version with ~fromBuild~ or ~fromTagged~ are unaffected.
