@@ -31,8 +31,8 @@ This example uses the latest known upstream ~master~ build for
   { pkgs, inputs, ... }:
   
   inputs.zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
-    version = "0.18.0-dev.861+1a0778dc2";
-    sha256 = "sha256-SSJbSzFRoRNG1MRpowjd8DfTFs2iNFBbj7NCYq6d0a4=";
+    version = "0.18.0-dev.897+117fd40fb";
+    sha256 = "sha256-IevmHtHqCQzDsKGvQAgS/k9TA7UiODFNG5Jk81ZZEGU=";
   }
 #+end_src
 
@@ -45,7 +45,7 @@ The repo ships these pinned packages, kept current automatically (built from ups
 
 | Package      | Tracks              | Version                  |
 |--------------+---------------------+--------------------------|
-| ~zig-master~ | latest ~master~       | ~0.18.0-dev.861+1a0778dc2~ |
+| ~zig-master~ | latest ~master~       | ~0.18.0-dev.897+117fd40fb~ |
 | ~zig-0_17~     | latest 0.17 release | ~0.17.1~                   |
 | ~zig-0_16~     | latest 0.16 release | ~0.16.0~                   |
 
@@ -175,8 +175,8 @@ kept short for illustration.
           let
             pkgs = nixpkgs.legacyPackages.${system};
             zig = zignix.lib.${system}.fromBuild {
-              version = "0.18.0-dev.861+1a0778dc2";
-              sha256 = "sha256-SSJbSzFRoRNG1MRpowjd8DfTFs2iNFBbj7NCYq6d0a4="; # x86_64-linux; use each system's hash
+              version = "0.18.0-dev.897+117fd40fb";
+              sha256 = "sha256-IevmHtHqCQzDsKGvQAgS/k9TA7UiODFNG5Jk81ZZEGU="; # x86_64-linux; use each system's hash
             };
           in {
             default = pkgs.mkShell { packages = [ zig ]; };
@@ -346,7 +346,7 @@ hash first:
 
 #+begin_src nix
   zignix.lib.${system}.fromBuild {
-    version = "0.18.0-dev.861+1a0778dc2";
+    version = "0.18.0-dev.897+117fd40fb";
     sha256 = zignix.lib.${system}.fakeHash;
   }
 #+end_src

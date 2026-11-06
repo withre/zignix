@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const pinned_zig_version = "0.18.0-dev.861+1a0778dc2";
+const pinned_zig_version = "0.18.0-dev.897+117fd40fb";
 
 pub fn main() void {
     const actual_zig_version = builtin.zig_version_string;
