@@ -22,16 +22,16 @@ let
     inherit (pkgs) lib;
   };
 
-  # Pin: 0.18.0-dev.954+60635c2bd (2026-11-11)
+  # Pin: 0.18.0-dev.1005+75d48dfff (2026-11-11)
   # Nix sha256 values converted from upstream shasums in:
   # https://ziglang.org/download/index.json
   pins = {
-    version = "0.18.0-dev.954+60635c2bd";
+    version = "0.18.0-dev.1005+75d48dfff";
     sha256 = {
-      x86_64-linux   = "sha256-6uAxzwA1Ude9fGua5eK1lGZ/kTiOxw7z/dKsFg9NPc8=";
-      aarch64-linux  = "sha256-uC8jHVnsI7fxEw5highnMFw7Rox2wKlyNA1CCccCpik=";
-      x86_64-darwin  = "sha256-qRPdDaONnrwSIZrsbDasd6pGb/wbQRIfdxD36LORNuw=";
-      aarch64-darwin = "sha256-MFhltnnHpnCW42BVyi3M1VXw6twqM1YF31oicJSktYQ=";
+      x86_64-linux   = "sha256-oH7uG70k2/NOFgndyQS+xhCiFsCw2ZZUtal2pfZQyJU=";
+      aarch64-linux  = "sha256-hOz2fPfeeKX5MbbxMzt56TMPg4aVsv3k+gMyxYpZrWk=";
+      x86_64-darwin  = "sha256-G5pdlF/obWMD6phiL20URGn6fv/J6PZ8RASonOjxYSU=";
+      aarch64-darwin = "sha256-NBVK+hU7lltph2t8dAbt/uxrVTAHK+Fk7JzFI5j3BW8=";
     };
   };
 in
