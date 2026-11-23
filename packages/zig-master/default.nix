@@ -22,7 +22,7 @@ let
     inherit (pkgs) lib;
   };
 
-  # Pin: 0.18.0-dev.1272+2ff397f75 (2026-11-22)
+  # Pin: 0.18.0-dev.1272+2ff397f75 (2026-11-23)
   # Nix sha256 values converted from upstream shasums in:
   # https://ziglang.org/download/index.json
   pins = {
