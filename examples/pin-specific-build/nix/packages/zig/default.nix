@@ -43,15 +43,15 @@
 # own project, bumping the pin is up to you.
 
 inputs.zignix.lib.${pkgs.stdenv.hostPlatform.system}.fromBuild {
-  # Pinned: 0.18.0-dev.1327+c851a1daa (upstream master as of 2026-11-27).
-  version = "0.18.0-dev.1327+c851a1daa";
+  # Pinned: 0.18.0-dev.1335+e73250965 (upstream master as of 2026-11-28).
+  version = "0.18.0-dev.1335+e73250965";
 
   # Converted from .master["x86_64-linux"].shasum etc. in index.json.
   sha256 =
     {
-      x86_64-linux   = "sha256-Jr1KuCY+JotFwA7ZLrZ4se/vj+xQ4UjG3SKCEVLNpSI=";
-      aarch64-linux  = "sha256-iHH6gEkk3H6B7P1PitS5yCDw9qh+UDQkUm+1Ob9x+aI=";
-      x86_64-darwin  = "sha256-lctk8c/UXwdsvesAdktts/O+lVcEBT6taAmNoDHfaQU=";
-      aarch64-darwin = "sha256-qOzn+OLL1CkTStsTh82Wxdp83ySiQTYMsL6/FXnUmUQ=";
+      x86_64-linux   = "sha256-sl68jpq2glaWj4zxUhFs11SavHv4IiobpTsOQIvBRZg=";
+      aarch64-linux  = "sha256-nkDZmZi8kIfmQkkGUZyzzNZeHuPn6XewCH2lPaDZMrQ=";
+      x86_64-darwin  = "sha256-9ofy0M0TAC5vtC9Az7aRibGB6TBY+W0EkHDdosKd334=";
+      aarch64-darwin = "sha256-12eU1qH9rKHHtNrMZAoU/1Stzfhjbp9/E7oFZlOuYa4=";
     }.${pkgs.stdenv.hostPlatform.system};
 }
